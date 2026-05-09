@@ -1,0 +1,8 @@
+*.e
+*.exe
+*.obj
+*.o
+*.txt
+*.src
+output.*
+/elhle/*
