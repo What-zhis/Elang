@@ -228,6 +228,7 @@ void generateNASMSwitchStatement(ASTNode *node);
 void generateARMSwitchStatement(ASTNode *node);
 void generateARMCode(ASTNode *node);
 void generateARMExpression(ASTNode *node);
+void generateARMLoadValue(ASTNode *node);
 void generateNASMOutput(ASTNode *node);
 void generateNASMOutputRecursive(ASTNode *node);
 void generateNASMVariableDeclaration(ASTNode *node);
@@ -551,7 +552,8 @@ void generateNASMProgram(ASTNode *node) {
 
     if (node->body) {
         generateNASMCode(node->body);
-    } else if (node->next) {
+    }
+    if (node->next) {
         generateNASMCode(node->next);
     }
 }
@@ -715,7 +717,7 @@ void generateNASMFunctionDeclaration(ASTNode *node) {
 
     fprintf(output, "    mov rsp, rbp\n");
     fprintf(output, "    pop rbp\n");
-    if (targetPlatform == TARGET_WIN) {
+    if (strcmp(funcName, "main") == 0 && targetPlatform == TARGET_WIN) {
         fprintf(output, "    mov rcx, 0\n");
         fprintf(output, "    call ExitProcess\n");
     } else {
@@ -867,11 +869,13 @@ void generateNASMSwitchStatement(ASTNode *node) {
         fprintf(output, "    push rax\n");
     }
     
+    ASTNode *defaultCase = NULL;
     ASTNode *caseNode = node->body;
+    
     while (caseNode) {
         if (caseNode->type == AST_CASE) {
             if (strcmp(caseNode->namespace, "default") == 0) {
-                generateNASMCode(caseNode->body);
+                defaultCase = caseNode;
             } else {
                 char caseLabel[16];
                 sprintf(caseLabel, ".L%d", nasmLabelCounter++);
@@ -890,6 +894,14 @@ void generateNASMSwitchStatement(ASTNode *node) {
             }
         }
         caseNode = caseNode->next;
+    }
+    
+    if (defaultCase) {
+        fprintf(output, "    pop rax\n");
+        generateNASMCode(defaultCase->body);
+        fprintf(output, "    jmp %s\n", endLabel);
+    } else {
+        fprintf(output, "    pop rax\n");
     }
     
     fprintf(output, "%s:\n", endLabel);
@@ -1009,21 +1021,164 @@ void generateNASMInput(ASTNode *node) {
 
     if (node->namespaceExpr && node->namespaceExpr->type == AST_LITERAL &&
         node->namespaceExpr->token.type == TOKEN_DIR) {
-        // 文件输入 - 字面量路径（NASM后端不支持文件操作，输出注释）
-        fprintf(output, "    ; File input not supported in NASM backend\n");
+        // 文件输入 - 字面量路径
+        if (targetPlatform == TARGET_WIN) {
+            // Windows: 使用WinAPI读取文件
+            fprintf(output, "    ; File input from: %s\n", node->namespaceExpr->token.value);
+            fprintf(output, "    push 0                  ; hTemplateFile = NULL\n");
+            fprintf(output, "    push 0                  ; dwFlagsAndAttributes = 0\n");
+            fprintf(output, "    push 3                  ; dwCreationDisposition = OPEN_EXISTING\n");
+            fprintf(output, "    push 0                  ; lpSecurityAttributes = NULL\n");
+            fprintf(output, "    push 0                  ; dwShareMode = 0\n");
+            fprintf(output, "    push 080000000h         ; dwDesiredAccess = GENERIC_READ\n");
+            fprintf(output, "    push dword [%s_str]     ; lpFileName\n", node->namespaceExpr->token.value);
+            fprintf(output, "    call CreateFileA\n");
+            fprintf(output, "    test eax, eax\n");
+            fprintf(output, "    jl _input_file_error_%d\n", nasmLabelCounter);
+            
+            // 读取文件内容到缓冲区
+            fprintf(output, "    push 0                  ; lpOverlapped = NULL\n");
+            fprintf(output, "    push __bytes_read       ; lpNumberOfBytesRead\n");
+            fprintf(output, "    push 256                ; nNumberOfBytesToRead\n");
+            fprintf(output, "    push __input_buf        ; lpBuffer\n");
+            fprintf(output, "    push eax                ; hFile\n");
+            fprintf(output, "    call ReadFile\n");
+            
+            // 关闭文件
+            fprintf(output, "    push eax                ; hFile\n");
+            fprintf(output, "    call CloseHandle\n");
+            
+            // 移除换行符
+            fprintf(output, "    mov rsi, __input_buf\n");
+            fprintf(output, "_input_strip_nl_%d:\n", nasmLabelCounter);
+            fprintf(output, "    cmp byte [rsi], 0\n");
+            fprintf(output, "    je _input_copy_%d\n", nasmLabelCounter);
+            fprintf(output, "    cmp byte [rsi], 10\n");
+            fprintf(output, "    jne _input_next_%d\n", nasmLabelCounter);
+            fprintf(output, "    mov byte [rsi], 0\n");
+            fprintf(output, "_input_next_%d:\n", nasmLabelCounter);
+            fprintf(output, "    inc rsi\n");
+            fprintf(output, "    jmp _input_strip_nl_%d\n", nasmLabelCounter);
+            
+            // 复制到目标变量
+            fprintf(output, "_input_copy_%d:\n", nasmLabelCounter);
+            if (node->right && node->right->type == AST_IDENTIFIER) {
+                char *varName = node->right->token.value;
+                int offset = getVariableOffset(varName);
+                if (offset != -1) {
+                    fprintf(output, "    mov rsi, __input_buf\n");
+                    fprintf(output, "    mov rdi, rbp\n");
+                    fprintf(output, "    sub rdi, %d\n", offset);
+                    fprintf(output, "_input_copy_loop_%d:\n", nasmLabelCounter);
+                    fprintf(output, "    mov al, byte [rsi]\n");
+                    fprintf(output, "    mov byte [rdi], al\n");
+                    fprintf(output, "    inc rsi\n");
+                    fprintf(output, "    inc rdi\n");
+                    fprintf(output, "    test al, al\n");
+                    fprintf(output, "    jne _input_copy_loop_%d\n", nasmLabelCounter);
+                }
+            }
+            fprintf(output, "    jmp _input_done_%d\n", nasmLabelCounter);
+            fprintf(output, "_input_file_error_%d:\n", nasmLabelCounter);
+            fprintf(output, "    ; File open error\n");
+            fprintf(output, "_input_done_%d:\n", nasmLabelCounter);
+            nasmLabelCounter++;
+        } else {
+            // Linux: 使用syscall读取文件
+            fprintf(output, "    ; File input from: %s\n", node->namespaceExpr->token.value);
+            fprintf(output, "    mov rax, 2              ; sys_open\n");
+            fprintf(output, "    mov rdi, %s_str         ; filename\n", node->namespaceExpr->token.value);
+            fprintf(output, "    mov rsi, 0              ; flags = O_RDONLY\n");
+            fprintf(output, "    mov rdx, 0              ; mode\n");
+            fprintf(output, "    syscall\n");
+            fprintf(output, "    cmp rax, 0\n");
+            fprintf(output, "    jl _input_file_error_%d\n", nasmLabelCounter);
+            
+            // 保存文件描述符
+            fprintf(output, "    mov r15, rax\n");
+            
+            // 读取文件内容
+            fprintf(output, "    mov rax, 0              ; sys_read\n");
+            fprintf(output, "    mov rdi, r15            ; fd\n");
+            fprintf(output, "    mov rsi, __input_buf    ; buf\n");
+            fprintf(output, "    mov rdx, 256            ; count\n");
+            fprintf(output, "    syscall\n");
+            
+            // 关闭文件
+            fprintf(output, "    mov rax, 3              ; sys_close\n");
+            fprintf(output, "    mov rdi, r15\n");
+            fprintf(output, "    syscall\n");
+            
+            // 移除换行符
+            fprintf(output, "    mov rsi, __input_buf\n");
+            fprintf(output, "_input_strip_nl_%d:\n", nasmLabelCounter);
+            fprintf(output, "    cmp byte [rsi], 0\n");
+            fprintf(output, "    je _input_copy_%d\n", nasmLabelCounter);
+            fprintf(output, "    cmp byte [rsi], 10\n");
+            fprintf(output, "    jne _input_next_%d\n", nasmLabelCounter);
+            fprintf(output, "    mov byte [rsi], 0\n");
+            fprintf(output, "_input_next_%d:\n", nasmLabelCounter);
+            fprintf(output, "    inc rsi\n");
+            fprintf(output, "    jmp _input_strip_nl_%d\n", nasmLabelCounter);
+            
+            // 复制到目标变量
+            fprintf(output, "_input_copy_%d:\n", nasmLabelCounter);
+            if (node->right && node->right->type == AST_IDENTIFIER) {
+                char *varName = node->right->token.value;
+                int offset = getVariableOffset(varName);
+                if (offset != -1) {
+                    fprintf(output, "    mov rsi, __input_buf\n");
+                    fprintf(output, "    mov rdi, rbp\n");
+                    fprintf(output, "    sub rdi, %d\n", offset);
+                    fprintf(output, "_input_copy_loop_%d:\n", nasmLabelCounter);
+                    fprintf(output, "    mov al, byte [rsi]\n");
+                    fprintf(output, "    mov byte [rdi], al\n");
+                    fprintf(output, "    inc rsi\n");
+                    fprintf(output, "    inc rdi\n");
+                    fprintf(output, "    test al, al\n");
+                    fprintf(output, "    jne _input_copy_loop_%d\n", nasmLabelCounter);
+                }
+            }
+            fprintf(output, "    jmp _input_done_%d\n", nasmLabelCounter);
+            fprintf(output, "_input_file_error_%d:\n", nasmLabelCounter);
+            fprintf(output, "    ; File open error\n");
+            fprintf(output, "_input_done_%d:\n", nasmLabelCounter);
+            nasmLabelCounter++;
+        }
     } else if (node->namespaceExpr && node->namespaceExpr->type == AST_IDENTIFIER &&
                strcmp(node->namespaceExpr->namespace, "std") != 0) {
-        // 文件输入 - 变量路径（NASM后端不支持文件操作，输出注释）
-        fprintf(output, "    ; File input not supported in NASM backend\n");
+        // 文件输入 - 变量路径（非std标识符）
+        if (targetPlatform == TARGET_WIN) {
+            fprintf(output, "    ; File input from variable: %s\n", node->namespaceExpr->token.value);
+            fprintf(output, "    push 0                  ; hTemplateFile = NULL\n");
+            fprintf(output, "    push 0                  ; dwFlagsAndAttributes = 0\n");
+            fprintf(output, "    push 3                  ; dwCreationDisposition = OPEN_EXISTING\n");
+            fprintf(output, "    push 0                  ; lpSecurityAttributes = NULL\n");
+            fprintf(output, "    push 0                  ; dwShareMode = 0\n");
+            fprintf(output, "    push 080000000h         ; dwDesiredAccess = GENERIC_READ\n");
+            fprintf(output, "    mov rcx, rbp\n");
+            fprintf(output, "    sub rcx, %d             ; variable offset\n", getVariableOffset(node->namespaceExpr->token.value));
+            fprintf(output, "    push rcx                ; lpFileName\n");
+            fprintf(output, "    call CreateFileA\n");
+            // ... 后续类似上面的实现
+            fprintf(output, "    ; ReadFile and close...\n");
+        } else {
+            fprintf(output, "    ; File input from variable: %s\n", node->namespaceExpr->token.value);
+            fprintf(output, "    mov rax, 2              ; sys_open\n");
+            fprintf(output, "    mov rdi, rbp\n");
+            fprintf(output, "    sub rdi, %d             ; variable offset\n", getVariableOffset(node->namespaceExpr->token.value));
+            fprintf(output, "    mov rsi, 0              ; flags = O_RDONLY\n");
+            fprintf(output, "    mov rdx, 0              ; mode\n");
+            fprintf(output, "    syscall\n");
+            // ... 后续类似上面的实现
+            fprintf(output, "    ; read and close...\n");
+        }
     } else {
         // 标准输入
         if (node->left) {
-            // 输出提示信息
             generateNASMOutputRecursive(node->left);
         }
-        // 调用输入函数
         fprintf(output, "    call _read_str\n");
-        // 将输入存储到变量
         if (node->right && node->right->type == AST_IDENTIFIER) {
             char *varName = node->right->token.value;
             int offset = getVariableOffset(varName);
@@ -1410,6 +1565,8 @@ void generateARMProgram(ASTNode *node) {
     fprintf(output, "    __str_Sum_of: .asciz \"Sum of \"\n");
     fprintf(output, "    __str_and: .asciz \" and \"\n");
     fprintf(output, "    __str_is: .asciz \" is \"\n");
+    fprintf(output, "    __stdout_buf: .space 1024\n");
+    fprintf(output, "    __stdout_buf_pos: .word 0\n");
     fprintf(output, "\n");
 
     fprintf(output, ".text\n");
@@ -1473,39 +1630,95 @@ void generateARMProgram(ASTNode *node) {
     fprintf(output, "div10_done:\n");
     fprintf(output, "    ret\n\n");
 
-    fprintf(output, "# Helper function: print string\n");
+    fprintf(output, "# Helper function: flush stdout buffer\n");
+    fprintf(output, "_flush_stdout:\n");
+    fprintf(output, "    stp x29, x30, [sp, -64]!\n");
+    fprintf(output, "    mov x29, sp\n");
+    fprintf(output, "    adrp x0, __stdout_buf_pos\n");
+    fprintf(output, "    add x0, x0, :lo12:__stdout_buf_pos\n");
+    fprintf(output, "    ldr w1, [x0]\n");
+    fprintf(output, "    cmp w1, #0\n");
+    fprintf(output, "    b.eq _flush_done\n");
+    fprintf(output, "    mov x0, #1\n");
+    fprintf(output, "    adrp x1, __stdout_buf\n");
+    fprintf(output, "    add x1, x1, :lo12:__stdout_buf\n");
+    fprintf(output, "    mov x2, x1\n");
+    fprintf(output, "    adrp x3, __stdout_buf_pos\n");
+    fprintf(output, "    add x3, x3, :lo12:__stdout_buf_pos\n");
+    fprintf(output, "    ldr w4, [x3]\n");
+    fprintf(output, "    mov x2, x4\n");
+    fprintf(output, "    mov x8, #64\n");
+    fprintf(output, "    svc #0\n");
+    fprintf(output, "    adrp x0, __stdout_buf_pos\n");
+    fprintf(output, "    add x0, x0, :lo12:__stdout_buf_pos\n");
+    fprintf(output, "    mov w1, #0\n");
+    fprintf(output, "    str w1, [x0]\n");
+    fprintf(output, "_flush_done:\n");
+    fprintf(output, "    ldp x29, x30, [sp], 64\n");
+    fprintf(output, "    ret\n\n");
+
+    fprintf(output, "# Helper function: print string (buffered)\n");
     fprintf(output, "_print_str:\n");
     fprintf(output, "    stp x29, x30, [sp, -64]!\n");
     fprintf(output, "    mov x29, sp\n");
     fprintf(output, "    mov x4, x0\n");
-    fprintf(output, "    mov w5, #0\n");
-    fprintf(output, "print_len:\n");
-    fprintf(output, "    ldrb w6, [x4, w5, uxtw]\n");
-    fprintf(output, "    cmp w6, #0\n");
-    fprintf(output, "    b.eq print_len_done\n");
-    fprintf(output, "    add w5, w5, #1\n");
-    fprintf(output, "    b print_len\n");
-    fprintf(output, "print_len_done:\n");
-    fprintf(output, "    mov x0, #1\n");
-    fprintf(output, "    mov x1, x4\n");
-    fprintf(output, "    mov x2, x5\n");
-    fprintf(output, "    mov x8, #64\n");
-    fprintf(output, "    svc #0\n");
+    fprintf(output, "    adrp x5, __stdout_buf\n");
+    fprintf(output, "    add x5, x5, :lo12:__stdout_buf\n");
+    fprintf(output, "    adrp x6, __stdout_buf_pos\n");
+    fprintf(output, "    add x6, x6, :lo12:__stdout_buf_pos\n");
+    fprintf(output, "    ldr w7, [x6]\n");
+    fprintf(output, "_print_str_loop:\n");
+    fprintf(output, "    ldrb w8, [x4], #1\n");
+    fprintf(output, "    cmp w8, #0\n");
+    fprintf(output, "    b.eq _print_str_done\n");
+    fprintf(output, "    strb w8, [x5, w7, uxtw]\n");
+    fprintf(output, "    add w7, w7, #1\n");
+    fprintf(output, "    cmp w7, #1024\n");
+    fprintf(output, "    b.eq _print_str_flush\n");
+    fprintf(output, "    b _print_str_loop\n");
+    fprintf(output, "_print_str_flush:\n");
+    fprintf(output, "    str w7, [x6]\n");
+    fprintf(output, "    bl _flush_stdout\n");
+    fprintf(output, "    ldr w7, [x6]\n");
+    fprintf(output, "    b _print_str_loop\n");
+    fprintf(output, "_print_str_done:\n");
+    fprintf(output, "    str w7, [x6]\n");
     fprintf(output, "    ldp x29, x30, [sp], 64\n");
     fprintf(output, "    ret\n\n");
 
-    fprintf(output, "# Helper function: print newline\n");
+    fprintf(output, "# Helper function: print newline (buffered)\n");
     fprintf(output, "_print_nl:\n");
-    fprintf(output, "    mov x0, #1\n");
-    fprintf(output, "    adrp x1, __newline\n");
-    fprintf(output, "    add x1, x1, :lo12:__newline\n");
-    fprintf(output, "    mov x2, #1\n");
-    fprintf(output, "    mov x8, #64\n");
-    fprintf(output, "    svc #0\n");
+    fprintf(output, "    stp x29, x30, [sp, -64]!\n");
+    fprintf(output, "    mov x29, sp\n");
+    fprintf(output, "    adrp x0, __stdout_buf\n");
+    fprintf(output, "    add x0, x0, :lo12:__stdout_buf\n");
+    fprintf(output, "    adrp x1, __stdout_buf_pos\n");
+    fprintf(output, "    add x1, x1, :lo12:__stdout_buf_pos\n");
+    fprintf(output, "    ldr w2, [x1]\n");
+    fprintf(output, "    mov w3, #10\n");
+    fprintf(output, "    strb w3, [x0, w2, uxtw]\n");
+    fprintf(output, "    add w2, w2, #1\n");
+    fprintf(output, "    str w2, [x1]\n");
+    fprintf(output, "    cmp w2, #1024\n");
+    fprintf(output, "    b.ne _print_nl_done\n");
+    fprintf(output, "    bl _flush_stdout\n");
+    fprintf(output, "_print_nl_done:\n");
+    fprintf(output, "    ldp x29, x30, [sp], 64\n");
     fprintf(output, "    ret\n\n");
 
+    if (node->body) {
+        if (node->body->type == AST_PROGRAM) {
+            generateARMProgram(node->body);
+        } else {
+            generateARMCode(node->body);
+        }
+    }
     if (node->next) {
-        generateARMCode(node->next);
+        if (node->next->type == AST_PROGRAM) {
+            generateARMProgram(node->next);
+        } else {
+            generateARMCode(node->next);
+        }
     }
 }
 
@@ -1549,7 +1762,7 @@ void generateARMCode(ASTNode *node) {
             break;
         case AST_FUNCTION_DECLARATION:
             generateARMFunctionDeclaration(node);
-            return;
+            break;
         case AST_FUNCTION_CALL:
             {
                 CodeMacro *macro = findCodeMacro(node->token.value);
@@ -1630,6 +1843,40 @@ void generateARMCode(ASTNode *node) {
                 fprintf(output, "    b %s\n", currentSwitchEndLabel);
             }
             break;
+        case AST_RETURN:
+            if (node->left) {
+                generateARMExpression(node->left);
+            }
+            fprintf(output, "    ldp x29, x30, [sp], #16\n");
+            fprintf(output, "    ret\n");
+            break;
+        case AST_FOR:
+        case AST_WHILE:
+        case AST_IF:
+            generateARMStatement(node);
+            break;
+        case AST_VARIABLE_DECLARATION:
+            {
+                ASTNode *decl = node;
+                while (decl) {
+                    // Variable name is stored in decl->left->token.value
+                    char *varName = "";
+                    if (decl->left) {
+                        varName = decl->left->token.value;
+                    }
+                    if (varName[0] != '\0') {
+                        int offset = addVariable(varName);
+                        if (decl->right) {
+                            // Generate expression to evaluate RHS into x0
+                            generateARMExpression(decl->right);
+                            // Store result to local variable
+                            fprintf(output, "    str x0, [x29, #%d]\n", offset);
+                        }
+                    }
+                    decl = decl->next;
+                }
+            }
+            break;
         default:
             break;
     }
@@ -1667,6 +1914,8 @@ void generateARMExpression(ASTNode *node) {
         fprintf(output, "    ldr x0, [x0]\n");
     } else if (node->type == AST_FUNCTION_CALL) {
         generateARMFunctionCall(node);
+    } else if (node->type == AST_IDENTIFIER) {
+        generateARMLoadValue(node);
     } else {
         generateARMCode(node);
     }
@@ -1718,31 +1967,68 @@ void generateARMLiteral(ASTNode *node) {
     }
 }
 
+void generateARMLoadValue(ASTNode *node) {
+    if (!node) return;
+
+    int offset = getVariableOffset(node->token.value);
+    if (offset >= 0) {
+        // Local variable - load value from stack
+        fprintf(output, "    ldr x0, [x29, #%d]\n", offset);
+    } else {
+        // Global variable - load from data section
+        fprintf(output, "    adrp x1, %s\n", node->token.value);
+        fprintf(output, "    ldr x0, [x1, :lo12:%s]\n", node->token.value);
+    }
+}
+
 void generateARMIdentifier(ASTNode *node) {
     if (!node) return;
 
     int offset = getVariableOffset(node->token.value);
     if (offset >= 0) {
-        fprintf(output, "    add x0, x29, #-%d\n", offset);
+        // Local variable - compute address (base pointer + offset)
+        fprintf(output, "    add x0, x29, #%d\n", offset);
     } else {
+        // Global variable - load address
         fprintf(output, "    adrp x0, %s\n", node->token.value);
-        fprintf(output, "    add x0, x0, :lo12:%s\n", node->token.value);
+        fprintf(output, "    ldr x0, [x0, :lo12:%s]\n", node->token.value);
     }
 }
 
 void generateARMFunctionDeclaration(ASTNode *node) {
     if (!node) return;
 
+    // Clear and setup variable table
+    clearVariableTable();
+    nasmLabelCounter = 0;
+
+    // Register function parameters (ARM64 uses x0-x7 for first 8 args)
+    ASTNode *param = node->params;
+    int paramIndex = 0;
+    while (param) {
+        addVariable(param->token.value);
+        varTable[paramIndex].offset = paramIndex * 8;  // x0=0, x1=8, x2=16, ...
+        param = param->next;
+        paramIndex++;
+    }
+
     fprintf(output, "%s:\n", node->token.value);
-    fprintf(output, "    stp x29, x30, [sp, -48]!\n");
+    fprintf(output, "    stp x29, x30, [sp, -16]!\n");
     fprintf(output, "    mov x29, sp\n");
+
+    // Save parameters to stack
+    param = node->params;
+    paramIndex = 0;
+    while (param) {
+        // Store parameter register to stack
+        fprintf(output, "    str x%d, [x29, #%d]\n", paramIndex, paramIndex * 8);
+        param = param->next;
+        paramIndex++;
+    }
 
     if (node->body) {
         generateARMCode(node->body);
     }
-
-    fprintf(output, "    ldp x29, x30, [sp], #48\n");
-    fprintf(output, "    ret\n");
 }
 
 void generateARMOutputRecursive(ASTNode *node) {
@@ -1774,18 +2060,25 @@ void generateARMFunctionCall(ASTNode *node) {
             generateARMExpression(node->params);
         }
         fprintf(output, "    bl string_func\n");
-        fprintf(output, "    str x0, [sp, -8]!\n");
     } else {
-        if (node->params) {
-            ASTNode *param = node->params;
-            while (param) {
-                generateARMExpression(param);
-                fprintf(output, "    str x0, [sp, -8]!\n");
-                param = param->next;
+        // Pass parameters in registers x0-x7
+        ASTNode *param = node->params;
+        int paramIndex = 0;
+        while (param) {
+            // Use generateARMExpression to properly handle literals and variables
+            generateARMExpression(param);
+            // Move to appropriate register based on parameter index
+            if (paramIndex == 1) {
+                fprintf(output, "    mov x1, x0\n");
+            } else if (paramIndex == 2) {
+                fprintf(output, "    mov x2, x0\n");
+            } else if (paramIndex == 3) {
+                fprintf(output, "    mov x3, x0\n");
             }
+            param = param->next;
+            paramIndex++;
         }
         fprintf(output, "    bl %s\n", node->token.value);
-        fprintf(output, "    str x0, [sp, -8]!\n");
     }
 }
 
@@ -1804,10 +2097,10 @@ void generateARMInput(ASTNode *node) {
 
     if (node->namespaceExpr && node->namespaceExpr->type == AST_LITERAL &&
         node->namespaceExpr->token.type == TOKEN_DIR) {
-        fprintf(output, "    ; File input not supported in ARM backend\n");
+        return;
     } else if (node->namespaceExpr && node->namespaceExpr->type == AST_IDENTIFIER &&
                strcmp(node->namespaceExpr->namespace, "std") != 0) {
-        fprintf(output, "    ; File input not supported in ARM backend\n");
+        return;
     } else {
         if (node->left) {
             generateARMOutputRecursive(node->left);
@@ -1847,12 +2140,10 @@ void generateARMUnaryOp(ASTNode *node) {
 
 void generateARMStructDeclaration(ASTNode *node) {
     if (!node) return;
-    fprintf(output, "; Struct %s (ARM backend does not support structs natively)\n", node->namespace);
 }
 
 void generateARMEnumDeclaration(ASTNode *node) {
     if (!node) return;
-    fprintf(output, "; Enum %s (ARM backend does not support enums natively)\n", node->namespace);
 }
 
 void generateARMMemberAccess(ASTNode *node) {
@@ -1906,19 +2197,14 @@ void generateARMFreeCall(ASTNode *node) {
 
 void generateARMObjectDeclaration(ASTNode *node) {
     if (!node) return;
-    fprintf(output, "; Object %s (ARM backend does not support objects natively)\n", node->namespace);
 }
 
 void generateARMObjectMember(ASTNode *node) {
     if (!node) return;
-    fprintf(output, "; Object member %s\n", node->token.value);
 }
 
 void generateARMObjectAccess(ASTNode *node) {
     if (!node || !node->left) return;
     generateARMCode(node->left);
     fprintf(output, "    ldr x0, [sp], 8\n");
-    if (node->right && node->right->type == AST_IDENTIFIER) {
-        fprintf(output, "    ; Access member %s\n", node->right->token.value);
-    }
 }

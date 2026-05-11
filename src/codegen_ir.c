@@ -33,19 +33,7 @@ typedef enum {
     REG_R12, REG_R13, REG_R14, REG_R15
 } X64Reg;
 
-typedef enum {
-    OP_MOV, OP_ADD, OP_SUB, OP_MUL, OP_DIV,
-    OP_CMP, OP_PUSH, OP_POP, OP_XOR, OP_RET,
-    OP_CALL, OP_JMP, OP_PRINT
-} IROpcode;
 
-typedef struct {
-    IROpcode opcode;
-    X64Reg dest;
-    X64Reg src;
-    unsigned long long imm;
-    char *label;
-} IRInstruction;
 
 typedef enum {
     ENCODING_IMPLICIT,

@@ -1865,23 +1865,24 @@ void freeSingleASTNode(ASTNode *node) {
 void freeAST(ASTNode *node) {
     if (!node) return;
     
-    // 递归清理子节点指针
-    freeAST(node->left);
-    freeAST(node->right);
-    freeAST(node->next);
-    freeAST(node->body);
-    freeAST(node->params);
-    freeAST(node->condition);
-    freeAST(node->init);
-    freeAST(node->update);
-    freeAST(node->elseBody);
-    freeAST(node->elseIfChain);
-    
-    // 内存池分配的节点不需要单独释放
-    // 清理当前节点指针
+    // 节点来自内存池，不需要递归释放
+    // 只清空指针避免悬空引用
     node->left = NULL;
     node->right = NULL;
     node->next = NULL;
+    node->body = NULL;
+    node->params = NULL;
+    node->condition = NULL;
+    node->init = NULL;
+    node->update = NULL;
+    node->elseBody = NULL;
+    node->elseIfChain = NULL;
+    node->namespaceExpr = NULL;
+}
+
+void freeASTAndPool(ASTNode *node) {
+    freeAST(node);
+    cleanupASTPool();
 }
 
 // 释放AST链表（不递归释放子节点）

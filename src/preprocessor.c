@@ -547,14 +547,23 @@ char *expandMacros(Preprocessor *pp, const char *input) {
                     const char *funcStart = p;
                     char *expanded = expandSecondaryMacro(pp, sm, &funcStart);
                     int expLen = strlen(expanded);
-                    if (resultSize + expLen < MAX_MACRO_BODY * 4 - 1) {
-                        strcpy(result + resultSize, expanded);
-                        resultSize += expLen;
+                    if (expLen > 0) {
+                        if (resultSize + expLen < MAX_MACRO_BODY * 4 - 1) {
+                            strcpy(result + resultSize, expanded);
+                            resultSize += expLen;
+                        }
+                        p = funcStart;
+                        currentIdLen = 0;
+                        inId = 0;
+                        continue;
+                    } else {
+                        // Found } - add it to result and skip
+                        result[resultSize++] = '}';
+                        p++; // Skip past }
+                        currentIdLen = 0;
+                        inId = 0;
+                        // Don't continue - let next character be processed
                     }
-                    p = funcStart;
-                    currentIdLen = 0;
-                    inId = 0;
-                    continue;
                 } else if (sm && sm->isActive) {
                     for (int k = 0; k < currentIdLen; k++) {
                         result[resultSize++] = currentId[k];
@@ -592,6 +601,11 @@ char *expandMacros(Preprocessor *pp, const char *input) {
                 }
             }
             inId = 0;
+            // Special handling for } - ensure it's always added to output
+            if (*p == '}') {
+                result[resultSize++] = *p++;
+                continue;
+            }
             result[resultSize++] = *p++;
         } else if (isIdStart(*p)) {
             inId = 1;
@@ -717,22 +731,22 @@ static char *expandSecondaryMacro(Preprocessor *pp, SecondaryMacro *sm, const ch
     }
     (*p)++;
 
-    for (int i = 0; i < sm->paramCount && **p && **p != ')'; i++) {
+    int foundClosingBrace = 0;
+    for (int i = 0; i < sm->paramCount && **p && **p != ')' && !foundClosingBrace; i++) {
         int depth = 0;
         int j = 0;
         argValues[i][0] = '\0';
 
         skipWhitespace(p);
-        while (**p && (**p != ',' || depth > 0)) {
+        while (**p && (**p != ',' || depth > 0) && !foundClosingBrace) {
             if (**p == '\n' || **p == '\r') {
-                if (depth == 0) break;
                 (*p)++;
                 continue;
             }
             if (**p == '}') {
-                if (depth == 0) break;
-                (*p)++;
-                continue;
+                // Stop parsing, return empty string to signal } was found
+                result[0] = '\0';
+                return result;
             }
             if (**p == ')') {
                 if (depth == 0) break;
@@ -761,7 +775,7 @@ static char *expandSecondaryMacro(Preprocessor *pp, SecondaryMacro *sm, const ch
         argValues[i][j] = '\0';
         argCount++;
 
-        if (**p == ',') (*p)++;
+        if (**p == ',' && !foundClosingBrace) (*p)++;
     }
 
     // 跳过换行和空白，找到右括号
