@@ -243,6 +243,7 @@ void generateNASMOutputRecursive(ASTNode *node);
 void generateNASMVariableDeclaration(ASTNode *node);
 void generateNASMAssignment(ASTNode *node);
 void generateNASMAsm(ASTNode *node);
+int isObjectName(const char *name);
 
 void generateNASMCode(ASTNode *node) {
     if (!node) return;
@@ -337,6 +338,14 @@ void collectStrings(ASTNode *node) {
     } else if (node->type == AST_STRING_CONCAT) {
         collectStrings(node->left);
         collectStrings(node->right);
+    } else if (node->type == AST_OBJECT_DECLARATION) {
+        // 收集对象成员的初始值里的字符串
+        collectStrings(node->body);
+    } else if (node->type == AST_OBJECT_MEMBER) {
+        // 收集对象成员的初始值
+        if (node->right) {
+            collectStrings(node->right);
+        }
     } else if (node->type == AST_LITERAL && node->token.type == TOKEN_STRING) {
         int found = 0;
         for (int i = 0; i < stringMapCount; i++) {
@@ -415,6 +424,29 @@ void generateNASMProgram(ASTNode *node) {
     fprintf(output, "    __newline: db 10\n");
     fprintf(output, "    __str_buf: times 256 db 0\n");
     fprintf(output, "%s", stringDefinitions);
+    
+    // 生成对象定义
+    for (int i = 0; i < objectCount; i++) {
+        ASTNode *objNode = objectTable[i].node;
+        fprintf(output, "\n    ; Object: %s\n", objectTable[i].name);
+        ASTNode *member = objNode->body;
+        while (member) {
+            if (member->type == AST_OBJECT_MEMBER) {
+                const char *typeName = member->namespace;
+                const char *memberName = member->token.value;
+                if (strcmp(typeName, "string") == 0) {
+                    fprintf(output, "    __obj_%s_%s: times 256 db 0\n", objectTable[i].name, memberName);
+                } else if (strcmp(typeName, "int") == 0 || strcmp(typeName, "float") == 0 || strcmp(typeName, "double") == 0) {
+                    fprintf(output, "    __obj_%s_%s: dq 0\n", objectTable[i].name, memberName);
+                } else if (strcmp(typeName, "char") == 0) {
+                    fprintf(output, "    __obj_%s_%s: db 0\n", objectTable[i].name, memberName);
+                } else {
+                    fprintf(output, "    __obj_%s_%s: dq 0\n", objectTable[i].name, memberName);
+                }
+            }
+            member = member->next;
+        }
+    }
     fprintf(output, "\n");
 
     fprintf(output, "section .text\n");
@@ -733,6 +765,55 @@ void generateNASMFunctionDeclaration(ASTNode *node) {
     fprintf(output, "    push rbp\n");
     fprintf(output, "    mov rbp, rsp\n");
     fprintf(output, "    sub rsp, %d\n", MAX_VARS * 8 + 32);
+
+    // 如果是main函数，初始化对象
+    if (strcmp(funcName, "main") == 0) {
+        fprintf(output, "    ; Initialize objects\n");
+        for (int i = 0; i < objectCount; i++) {
+            ASTNode *objNode = objectTable[i].node;
+            ASTNode *member = objNode->body;
+            while (member) {
+                if (member->type == AST_OBJECT_MEMBER && member->right) {
+                    const char *typeName = member->namespace;
+                    const char *memberName = member->token.value;
+                    if (strcmp(typeName, "string") == 0) {
+                        // 复制字符串
+                        if (member->right->type == AST_LITERAL && member->right->token.type == TOKEN_STRING) {
+                            // 找到这个字符串的标签
+                            const char *strLabel = NULL;
+                            for (int j = 0; j < stringMapCount; j++) {
+                                if (strcmp(stringMapStrings[j], member->right->token.value) == 0) {
+                                    strLabel = stringMapLabels[j];
+                                    break;
+                                }
+                            }
+                            if (strLabel) {
+                                fprintf(output, "    ; Copy string to %s.%s\n", objectTable[i].name, memberName);
+                                fprintf(output, "    mov rsi, %s\n", strLabel);
+                                fprintf(output, "    mov rdi, __obj_%s_%s\n", objectTable[i].name, memberName);
+                                fprintf(output, "    mov rcx, 0\n");
+                                fprintf(output, "__obj_strcpy_%d:\n", nasmLabelCounter);
+                                fprintf(output, "    mov al, [rsi + rcx]\n");
+                                fprintf(output, "    mov [rdi + rcx], al\n");
+                                fprintf(output, "    cmp al, 0\n");
+                                fprintf(output, "    je __obj_strcpy_done_%d\n", nasmLabelCounter);
+                                fprintf(output, "    inc rcx\n");
+                                fprintf(output, "    cmp rcx, 255\n");
+                                fprintf(output, "    jl __obj_strcpy_%d\n", nasmLabelCounter);
+                                fprintf(output, "__obj_strcpy_done_%d:\n", nasmLabelCounter);
+                                nasmLabelCounter++;
+                            }
+                        }
+                    } else if (strcmp(typeName, "int") == 0) {
+                        if (member->right->type == AST_LITERAL) {
+                            fprintf(output, "    mov qword [__obj_%s_%s], %s\n", objectTable[i].name, memberName, member->right->token.value);
+                        }
+                    }
+                }
+                member = member->next;
+            }
+        }
+    }
 
     if (node->body) {
         generateNASMCode(node->body);
@@ -1250,6 +1331,61 @@ void generateNASMAssignment(ASTNode *node) {
             fprintf(output, "    pop rax\n");
             fprintf(output, "    mov [rbp - %d], rax\n", offset);
         }
+    } else if (node->left && node->left->type == AST_OBJECT_ACCESS) {
+        // 对象成员赋值
+        ASTNode *objAccess = node->left;
+        if (objAccess->left->type == AST_IDENTIFIER && objAccess->right && objAccess->right->type == AST_IDENTIFIER) {
+            char *objName = objAccess->left->token.value;
+            char *memberName = objAccess->right->token.value;
+            if (isObjectName(objName)) {
+                if (node->right) {
+                    generateNASMExpression(node->right);
+                    fprintf(output, "    pop rax\n");
+                    // 检查对象成员类型，决定mov的大小
+                    // 先检查对象成员类型
+                    int found = 0;
+                    const char *typeName = NULL;
+                    for (int i = 0; i < objectCount && !found; i++) {
+                        if (strcmp(objectTable[i].name, objName) == 0) {
+                            ASTNode *member = objectTable[i].node->body;
+                            while (member) {
+                                if (member->type == AST_OBJECT_MEMBER && strcmp(member->token.value, memberName) == 0) {
+                                    typeName = member->namespace;
+                                    found = 1;
+                                    break;
+                                }
+                                member = member->next;
+                            }
+                        }
+                    }
+                    if (found) {
+                        if (strcmp(typeName, "string") == 0) {
+                            // 字符串赋值需要复制
+                            // 我们假设右边是字符串字面量或字符串变量
+                            fprintf(output, "    mov rsi, rax\n");
+                            fprintf(output, "    mov rdi, __obj_%s_%s\n", objName, memberName);
+                            fprintf(output, "    mov rcx, 0\n");
+                            fprintf(output, "__obj_assign_str_%d:\n", nasmLabelCounter);
+                            fprintf(output, "    mov al, [rsi + rcx]\n");
+                            fprintf(output, "    mov [rdi + rcx], al\n");
+                            fprintf(output, "    cmp al, 0\n");
+                            fprintf(output, "    je __obj_assign_str_done_%d\n", nasmLabelCounter);
+                            fprintf(output, "    inc rcx\n");
+                            fprintf(output, "    cmp rcx, 255\n");
+                            fprintf(output, "    jl __obj_assign_str_%d\n", nasmLabelCounter);
+                            fprintf(output, "__obj_assign_str_done_%d:\n", nasmLabelCounter);
+                            nasmLabelCounter++;
+                        } else if (strcmp(typeName, "char") == 0) {
+                            fprintf(output, "    mov byte [__obj_%s_%s], al\n", objName, memberName);
+                        } else {
+                            fprintf(output, "    mov qword [__obj_%s_%s], rax\n", objName, memberName);
+                        }
+                    } else {
+                        fprintf(output, "    mov qword [__obj_%s_%s], rax\n", objName, memberName);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1314,20 +1450,78 @@ void generateNASMFreeCall(ASTNode *node) {
 
 void generateNASMObjectDeclaration(ASTNode *node) {
     if (!node) return;
-    fprintf(output, "; Object %s (NASM backend does not support objects natively)\n", node->namespace);
+    // 对象定义已经在数据段处理了，这里不需要做什么
 }
 
 void generateNASMObjectMember(ASTNode *node) {
     if (!node) return;
-    fprintf(output, "; Object member %s\n", node->token.value);
+    // 对象成员已经在对象定义时处理了
+}
+
+// 辅助函数：检查是否是对象名
+int isObjectName(const char *name) {
+    for (int i = 0; i < objectCount; i++) {
+        if (strcmp(objectTable[i].name, name) == 0) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 void generateNASMObjectAccess(ASTNode *node) {
     if (!node || !node->left) return;
-    generateNASMCode(node->left);
-    fprintf(output, "    pop rax\n");
-    if (node->right && node->right->type == AST_IDENTIFIER) {
-        fprintf(output, "    ; Access member %s\n", node->right->token.value);
+    
+    if (node->left->type == AST_IDENTIFIER && node->right && node->right->type == AST_IDENTIFIER) {
+        char *objName = node->left->token.value;
+        char *memberName = node->right->token.value;
+        
+        // 检查是否是对象名
+        if (isObjectName(objName)) {
+            // 获取对象成员类型
+            const char *typeName = NULL;
+            int found = 0;
+            for (int i = 0; i < objectCount && !found; i++) {
+                if (strcmp(objectTable[i].name, objName) == 0) {
+                    ASTNode *member = objectTable[i].node->body;
+                    while (member) {
+                        if (member->type == AST_OBJECT_MEMBER && strcmp(member->token.value, memberName) == 0) {
+                            typeName = member->namespace;
+                            found = 1;
+                            break;
+                        }
+                        member = member->next;
+                    }
+                }
+            }
+            
+            if (found) {
+                if (strcmp(typeName, "string") == 0) {
+                    // 字符串：推地址
+                    fprintf(output, "    push __obj_%s_%s\n", objName, memberName);
+                } else if (strcmp(typeName, "char") == 0) {
+                    // 字符：加载值并推
+                    fprintf(output, "    mov al, [__obj_%s_%s]\n", objName, memberName);
+                    fprintf(output, "    movzx rax, al\n");
+                    fprintf(output, "    push rax\n");
+                } else {
+                    // 其他类型：加载值并推
+                    fprintf(output, "    mov rax, [__obj_%s_%s]\n", objName, memberName);
+                    fprintf(output, "    push rax\n");
+                }
+            } else {
+                // 默认：加载值并推
+                fprintf(output, "    mov rax, [__obj_%s_%s]\n", objName, memberName);
+                fprintf(output, "    push rax\n");
+            }
+        } else {
+            // 不是已知对象，尝试正常处理
+            generateNASMCode(node->left);
+            fprintf(output, "    pop rax\n");
+        }
+    } else {
+        // 其他情况
+        generateNASMCode(node->left);
+        fprintf(output, "    pop rax\n");
     }
 }
 
@@ -1575,6 +1769,13 @@ void generateARMFunctionCall(ASTNode *node);
 void generateARMOutput(ASTNode *node);
 
 void generateARMProgram(ASTNode *node) {
+    clearVariableTable();
+    nasmLabelCounter = 0;
+    objectCount = 0;
+
+    collectObjects(node);
+    collectStrings(node);
+
     fprintf(output, "# AArch64 Assembly Code Generated by E Compiler\n");
     if (targetPlatform == TARGET_ARM_LINUX) {
         fprintf(output, "# Architecture: AArch64 Linux\n\n");
@@ -1585,9 +1786,39 @@ void generateARMProgram(ASTNode *node) {
     fprintf(output, ".data\n");
     fprintf(output, "    __newline: .byte 10\n");
     fprintf(output, "    __str_buf: .space 256\n");
+    
+    // 输出收集到的字符串
+    for (int i = 0; i < stringMapCount; i++) {
+        fprintf(output, "    %s: .asciz \"%s\"\n", stringMapLabels[i], stringMapStrings[i]);
+    }
+    
     fprintf(output, "    __str_Sum_of: .asciz \"Sum of \"\n");
     fprintf(output, "    __str_and: .asciz \" and \"\n");
     fprintf(output, "    __str_is: .asciz \" is \"\n");
+    
+    // 输出对象定义
+    for (int i = 0; i < objectCount; i++) {
+        ASTNode *objNode = objectTable[i].node;
+        fprintf(output, "\n    # Object: %s\n", objectTable[i].name);
+        ASTNode *member = objNode->body;
+        while (member) {
+            if (member->type == AST_OBJECT_MEMBER) {
+                const char *typeName = member->namespace;
+                const char *memberName = member->token.value;
+                if (strcmp(typeName, "string") == 0) {
+                    fprintf(output, "    __obj_%s_%s: .space 256\n", objectTable[i].name, memberName);
+                } else if (strcmp(typeName, "int") == 0 || strcmp(typeName, "float") == 0 || strcmp(typeName, "double") == 0) {
+                    fprintf(output, "    __obj_%s_%s: .quad 0\n", objectTable[i].name, memberName);
+                } else if (strcmp(typeName, "char") == 0) {
+                    fprintf(output, "    __obj_%s_%s: .byte 0\n", objectTable[i].name, memberName);
+                } else {
+                    fprintf(output, "    __obj_%s_%s: .quad 0\n", objectTable[i].name, memberName);
+                }
+            }
+            member = member->next;
+        }
+    }
+    
     fprintf(output, "    __stdout_buf: .space 1024\n");
     fprintf(output, "    __stdout_buf_pos: .word 0\n");
     fprintf(output, "\n");
@@ -1777,6 +2008,60 @@ void generateARMCode(ASTNode *node) {
             generateARMExpression(node);
             break;
         case AST_ASSIGNMENT:
+            if (node->left && node->left->type == AST_OBJECT_ACCESS) {
+                ASTNode *objAccess = node->left;
+                if (objAccess->left->type == AST_IDENTIFIER && objAccess->right && objAccess->right->type == AST_IDENTIFIER) {
+                    char *objName = objAccess->left->token.value;
+                    char *memberName = objAccess->right->token.value;
+                    if (isObjectName(objName)) {
+                        const char *typeName = NULL;
+                        int found = 0;
+                        for (int i = 0; i < objectCount && !found; i++) {
+                            if (strcmp(objectTable[i].name, objName) == 0) {
+                                ASTNode *member = objectTable[i].node->body;
+                                while (member) {
+                                    if (member->type == AST_OBJECT_MEMBER && strcmp(member->token.value, memberName) == 0) {
+                                        typeName = member->namespace;
+                                        found = 1;
+                                        break;
+                                    }
+                                    member = member->next;
+                                }
+                            }
+                        }
+                        
+                        generateARMExpression(node->right);
+                        
+                        if (found) {
+                            if (strcmp(typeName, "string") == 0) {
+                                fprintf(output, "    mov x1, x0\n");
+                                fprintf(output, "    adrp x0, __obj_%s_%s\n", objName, memberName);
+                                fprintf(output, "    add x0, x0, :lo12:__obj_%s_%s\n", objName, memberName);
+                                fprintf(output, "    mov w2, #0\n");
+                                fprintf(output, "__obj_assign_str_%d:\n", nasmLabelCounter);
+                                fprintf(output, "    ldrb w3, [x1, w2, uxtw]\n");
+                                fprintf(output, "    strb w3, [x0, w2, uxtw]\n");
+                                fprintf(output, "    cmp w3, #0\n");
+                                fprintf(output, "    b.eq __obj_assign_str_done_%d\n", nasmLabelCounter);
+                                fprintf(output, "    add w2, w2, #1\n");
+                                fprintf(output, "    cmp w2, #255\n");
+                                fprintf(output, "    b.lt __obj_assign_str_%d\n", nasmLabelCounter);
+                                fprintf(output, "__obj_assign_str_done_%d:\n", nasmLabelCounter);
+                                nasmLabelCounter++;
+                            } else if (strcmp(typeName, "char") == 0) {
+                                fprintf(output, "    adrp x1, __obj_%s_%s\n", objName, memberName);
+                                fprintf(output, "    add x1, x1, :lo12:__obj_%s_%s\n", objName, memberName);
+                                fprintf(output, "    strb w0, [x1]\n");
+                            } else {
+                                fprintf(output, "    adrp x1, __obj_%s_%s\n", objName, memberName);
+                                fprintf(output, "    add x1, x1, :lo12:__obj_%s_%s\n", objName, memberName);
+                                fprintf(output, "    str x0, [x1]\n");
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
             generateARMExpression(node->right);
             fprintf(output, "    str x0, [sp, -8]!\n");
             generateARMIdentifier(node->left);
@@ -2049,6 +2334,58 @@ void generateARMFunctionDeclaration(ASTNode *node) {
         paramIndex++;
     }
 
+    // 如果是main函数，初始化对象
+    if (strcmp(node->token.value, "main") == 0) {
+        fprintf(output, "    # Initialize objects\n");
+        for (int i = 0; i < objectCount; i++) {
+            ASTNode *objNode = objectTable[i].node;
+            ASTNode *member = objNode->body;
+            while (member) {
+                if (member->type == AST_OBJECT_MEMBER && member->right) {
+                    const char *typeName = member->namespace;
+                    const char *memberName = member->token.value;
+                    if (strcmp(typeName, "string") == 0) {
+                        if (member->right->type == AST_LITERAL && member->right->token.type == TOKEN_STRING) {
+                            const char *strLabel = NULL;
+                            for (int j = 0; j < stringMapCount; j++) {
+                                if (strcmp(stringMapStrings[j], member->right->token.value) == 0) {
+                                    strLabel = stringMapLabels[j];
+                                    break;
+                                }
+                            }
+                            if (strLabel) {
+                                fprintf(output, "    # Copy string to %s.%s\n", objectTable[i].name, memberName);
+                                fprintf(output, "    adrp x0, %s\n", strLabel);
+                                fprintf(output, "    add x0, x0, :lo12:%s\n", strLabel);
+                                fprintf(output, "    adrp x1, __obj_%s_%s\n", objectTable[i].name, memberName);
+                                fprintf(output, "    add x1, x1, :lo12:__obj_%s_%s\n", objectTable[i].name, memberName);
+                                fprintf(output, "    mov w2, #0\n");
+                                fprintf(output, "__obj_strcpy_%d:\n", nasmLabelCounter);
+                                fprintf(output, "    ldrb w3, [x0, w2, uxtw]\n");
+                                fprintf(output, "    strb w3, [x1, w2, uxtw]\n");
+                                fprintf(output, "    cmp w3, #0\n");
+                                fprintf(output, "    b.eq __obj_strcpy_done_%d\n", nasmLabelCounter);
+                                fprintf(output, "    add w2, w2, #1\n");
+                                fprintf(output, "    cmp w2, #255\n");
+                                fprintf(output, "    b.lt __obj_strcpy_%d\n", nasmLabelCounter);
+                                fprintf(output, "__obj_strcpy_done_%d:\n", nasmLabelCounter);
+                                nasmLabelCounter++;
+                            }
+                        }
+                    } else if (strcmp(typeName, "int") == 0) {
+                        if (member->right->type == AST_LITERAL) {
+                            fprintf(output, "    mov w0, #%s\n", member->right->token.value);
+                            fprintf(output, "    adrp x1, __obj_%s_%s\n", objectTable[i].name, memberName);
+                            fprintf(output, "    add x1, x1, :lo12:__obj_%s_%s\n", objectTable[i].name, memberName);
+                            fprintf(output, "    str x0, [x1]\n");
+                        }
+                    }
+                }
+                member = member->next;
+            }
+        }
+    }
+
     if (node->body) {
         generateARMCode(node->body);
     }
@@ -2228,6 +2565,51 @@ void generateARMObjectMember(ASTNode *node) {
 
 void generateARMObjectAccess(ASTNode *node) {
     if (!node || !node->left) return;
-    generateARMCode(node->left);
-    fprintf(output, "    ldr x0, [sp], 8\n");
+    
+    if (node->left->type == AST_IDENTIFIER && node->right && node->right->type == AST_IDENTIFIER) {
+        char *objName = node->left->token.value;
+        char *memberName = node->right->token.value;
+        
+        if (isObjectName(objName)) {
+            const char *typeName = NULL;
+            int found = 0;
+            for (int i = 0; i < objectCount && !found; i++) {
+                if (strcmp(objectTable[i].name, objName) == 0) {
+                    ASTNode *member = objectTable[i].node->body;
+                    while (member) {
+                        if (member->type == AST_OBJECT_MEMBER && strcmp(member->token.value, memberName) == 0) {
+                            typeName = member->namespace;
+                            found = 1;
+                            break;
+                        }
+                        member = member->next;
+                    }
+                }
+            }
+            
+            if (found) {
+                if (strcmp(typeName, "string") == 0) {
+                    fprintf(output, "    adrp x0, __obj_%s_%s\n", objName, memberName);
+                    fprintf(output, "    add x0, x0, :lo12:__obj_%s_%s\n", objName, memberName);
+                    fprintf(output, "    str x0, [sp, #-16]!\n");
+                } else if (strcmp(typeName, "char") == 0) {
+                    fprintf(output, "    adrp x0, __obj_%s_%s\n", objName, memberName);
+                    fprintf(output, "    add x0, x0, :lo12:__obj_%s_%s\n", objName, memberName);
+                    fprintf(output, "    ldrb w0, [x0]\n");
+                    fprintf(output, "    str x0, [sp, #-16]!\n");
+                } else {
+                    fprintf(output, "    adrp x0, __obj_%s_%s\n", objName, memberName);
+                    fprintf(output, "    add x0, x0, :lo12:__obj_%s_%s\n", objName, memberName);
+                    fprintf(output, "    ldr x0, [x0]\n");
+                    fprintf(output, "    str x0, [sp, #-16]!\n");
+                }
+            }
+        } else {
+            generateARMCode(node->left);
+            fprintf(output, "    ldr x0, [sp], #8\n");
+        }
+    } else {
+        generateARMCode(node->left);
+        fprintf(output, "    ldr x0, [sp], #8\n");
+    }
 }
