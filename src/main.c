@@ -22,7 +22,7 @@ extern void printASTPoolStats();
 Preprocessor globalPP;
 
 char *readFile(const char *filename) {
-    FILE *f = fopen(filename, "r");
+    FILE *f = fopen(filename, "rb");
     if (!f) return NULL;
 
     fseek(f, 0, SEEK_END);
@@ -33,6 +33,16 @@ char *readFile(const char *filename) {
     fread(content, 1, len, f);
     content[len] = '\0';
     fclose(f);
+    
+    int writePos = 0;
+    for (int i = 0; content[i] != '\0'; i++) {
+        if (content[i] == '\r' && content[i+1] == '\n') {
+            continue;
+        }
+        content[writePos++] = content[i];
+    }
+    content[writePos] = '\0';
+    
     return content;
 }
 
@@ -219,15 +229,15 @@ int main(int argc, char *argv[]) {
 
     // Preprocessed content is ready
 
-    FILE *tempFile = fopen("_temp_processed.e", "w");
+    FILE *tempFile = fopen("_temp_processed.e", "wb");
     if (!tempFile) {
         fprintf(stderr, "Error: Could not create temp file\n");
         return 1;
     }
-    fprintf(tempFile, "%s", preprocessedContent);
+    fwrite(preprocessedContent, 1, strlen(preprocessedContent), tempFile);
     fclose(tempFile);
 
-    input = fopen("_temp_processed.e", "r");
+    input = fopen("_temp_processed.e", "rb");
     if (!input) {
         fprintf(stderr, "Error: Could not open processed file\n");
         return 1;

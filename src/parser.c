@@ -172,8 +172,10 @@ ASTNode *parseStatement() {
                     
                     while (currentToken.type != TOKEN_RBRACE && currentToken.type != TOKEN_EOF) {
                         // 解析结构体成员
-                        Token memberTypeTok = currentToken;
-                        if (currentToken.type != TOKEN_ID) {
+                        // 检查是否是有效的类型
+                        if (currentToken.type != TOKEN_ID && currentToken.type != TOKEN_INT && 
+                            currentToken.type != TOKEN_FLOAT && currentToken.type != TOKEN_DOUBLE && 
+                            currentToken.type != TOKEN_STRING_TYPE && currentToken.type != TOKEN_CHAR_TYPE) {
                             fprintf(stderr, "Error: Expected member type at line %d, column %d\n", currentToken.line, currentToken.column);
                             errorCount++;
                             // 错误恢复：跳过直到分号或右大括号
@@ -186,9 +188,9 @@ ASTNode *parseStatement() {
                             }
                             continue;
                         }
-                        expect(TOKEN_ID, "Expected member type");
+                        Token memberTypeTok = currentToken;
+                        currentToken = getNextToken();
                         
-                        Token memberNameTok = currentToken;
                         if (currentToken.type != TOKEN_ID) {
                             fprintf(stderr, "Error: Expected member name at line %d, column %d\n", currentToken.line, currentToken.column);
                             errorCount++;
@@ -202,7 +204,8 @@ ASTNode *parseStatement() {
                             }
                             continue;
                         }
-                        expect(TOKEN_ID, "Expected member name");
+                        Token memberNameTok = currentToken;
+                        currentToken = getNextToken();
                         
                         expect(TOKEN_SEMICOLON, "Expected ;");
                         
@@ -460,6 +463,7 @@ ASTNode *parseStatement() {
                 ASTNode *output = createNode(AST_OUTPUT, currentToken);
                 expect(TOKEN_OUT, "Expected eout");
                 expect(TOKEN_GT, "Expected >");
+                expect(TOKEN_NAMESPACE, "Expected namespace");
                 // namespace可以是任意表达式（标识符、dir路径等）
                 // 但如果namespace是标识符或dir，需要避免符号检查
                 ASTNode *nsExpr = NULL;
