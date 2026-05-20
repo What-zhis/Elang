@@ -1,142 +1,142 @@
-# E语言编译器
+# E Language Compiler
 
-一个使用C语言实现的E语言编译器，支持变量声明、函数定义、控制流、输入输出、类型转换、结构体、枚举、对象、指针、内存管理、源文件导入、内联汇编和强大的两级宏系统等功能。编译器可以生成C代码或NASM汇编代码。
+An E language compiler implemented in C, supporting variable declarations, function definitions, control flow, input/output, type conversion, structs, enums, objects, pointers, memory management, source file imports, inline assembly, and a powerful two-level macro system. The compiler can generate C code or NASM assembly code.
 
-## 目录
+## Table of Contents
 
-- [E语言编译器](#e语言编译器)
-  - [目录](#目录)
-  - [1. 快速开始](#1-快速开始)
-    - [1.1 编译编译器](#11-编译编译器)
-    - [1.2 基本用法](#12-基本用法)
-    - [1.3 命令行参数](#13-命令行参数)
-  - [2. 语言语法](#2-语言语法)
-    - [2.1 注释](#21-注释)
-    - [2.2 变量声明](#22-变量声明)
-    - [2.3 数据类型](#23-数据类型)
-    - [2.4 函数定义](#24-函数定义)
-    - [2.5 控制流](#25-控制流)
-    - [2.6 输入输出](#26-输入输出)
-    - [2.7 类型转换](#27-类型转换)
-    - [2.8 字符串操作](#28-字符串操作)
-    - [2.9 指针和内存管理](#29-指针和内存管理)
-    - [2.10 结构体和枚举](#210-结构体和枚举)
-    - [2.11 对象](#211-对象)
-    - [2.12 源文件导入（import）](#212-源文件导入import)
-    - [2.13 内联汇编](#213-内联汇编)
-    - [2.14 字符串插值](#214-字符串插值)
-    - [2.15 文件I/O](#215-file-io)
-    - [2.16 宏系统](#216-宏系统)
-  - [3. 操作符参考](#3-操作符参考)
-    - [3.1 算术操作符](#31-算术操作符)
-    - [3.2 比较操作符](#32-比较操作符)
-    - [3.3 逻辑操作符](#33-逻辑操作符)
-    - [3.4 赋值操作符](#34-赋值操作符)
-    - [3.5 字符串操作符](#35-字符串操作符)
-    - [3.6 指针操作符](#36-指针操作符)
-  - [4. 编译器行为](#4-编译器行为)
-    - [4.1 编译流程](#41-编译流程)
-    - [4.2 符号表管理](#42-符号表管理)
-    - [4.3 错误处理机制](#43-错误处理机制)
-    - [4.4 代码生成策略](#44-代码生成策略)
-  - [5. 边缘情况处理](#5-边缘情况处理)
-    - [5.1 变量相关](#51-变量相关)
-    - [5.2 函数相关](#52-函数相关)
-    - [5.3 类型转换](#53-类型转换)
-    - [5.4 内存管理](#54-内存管理)
-    - [5.5 控制流](#55-控制流)
-    - [5.6 字符串处理](#56-字符串处理)
-    - [5.7 文件I/O](#57-file-io)
-    - [5.8 导入机制](#58-导入机制)
-  - [6. 平台兼容性](#6-平台兼容性)
-  - [7. VSCode插件](#7-vscode插件)
-    - [7.1 功能特性](#71-功能特性)
-    - [7.2 安装方法](#72-安装方法)
-    - [7.3 打包发布](#73-打包发布)
-  - [8. 示例程序](#8-示例程序)
+- [E Language Compiler](#e-language-compiler)
+  - [Table of Contents](#table-of-contents)
+  - [1. Quick Start](#1-quick-start)
+    - [1.1 Compile the Compiler](#11-compile-the-compiler)
+    - [1.2 Basic Usage](#12-basic-usage)
+    - [1.3 Command Line Arguments](#13-command-line-arguments)
+  - [2. Language Syntax](#2-language-syntax)
+    - [2.1 Comments](#21-comments)
+    - [2.2 Variable Declaration](#22-variable-declaration)
+    - [2.3 Data Types](#23-data-types)
+    - [2.4 Function Definition](#24-function-definition)
+    - [2.5 Control Flow](#25-control-flow)
+    - [2.6 Input Output](#26-input-output)
+    - [2.7 Type Conversion](#27-type-conversion)
+    - [2.8 String Operations](#28-string-operations)
+    - [2.9 Pointers and Memory Management](#29-pointers-and-memory-management)
+    - [2.10 Structs and Enums](#210-structs-and-enums)
+    - [2.11 Objects](#211-objects)
+    - [2.12 Source File Import](#212-source-file-import)
+    - [2.13 Inline Assembly](#213-inline-assembly)
+    - [2.14 String Interpolation](#214-string-interpolation)
+    - [2.15 File I/O](#215-file-io)
+    - [2.16 Macro System](#216-macro-system)
+  - [3. Operator Reference](#3-operator-reference)
+    - [3.1 Arithmetic Operators](#31-arithmetic-operators)
+    - [3.2 Comparison Operators](#32-comparison-operators)
+    - [3.3 Logical Operators](#33-logical-operators)
+    - [3.4 Assignment Operators](#34-assignment-operators)
+    - [3.5 String Operators](#35-string-operators)
+    - [3.6 Pointer Operators](#36-pointer-operators)
+  - [4. Compiler Behavior](#4-compiler-behavior)
+    - [4.1 Compilation Process](#41-compilation-process)
+    - [4.2 Symbol Table Management](#42-symbol-table-management)
+    - [4.3 Error Handling Mechanism](#43-error-handling-mechanism)
+    - [4.4 Code Generation Strategy](#44-code-generation-strategy)
+  - [5. Edge Case Handling](#5-edge-case-handling)
+    - [5.1 Variable Related](#51-variable-related)
+    - [5.2 Function Related](#52-function-related)
+    - [5.3 Type Conversion](#53-type-conversion)
+    - [5.4 Memory Management](#54-memory-management)
+    - [5.5 Control Flow](#55-control-flow)
+    - [5.6 String Handling](#56-string-handling)
+    - [5.7 File I/O](#57-file-io)
+    - [5.8 Import Mechanism](#58-import-mechanism)
+  - [6. Platform Compatibility](#6-platform-compatibility)
+  - [7. VSCode Extension](#7-vscode-extension)
+    - [7.1 Features](#71-features)
+    - [7.2 Installation](#72-installation)
+    - [7.3 Packaging](#73-packaging)
+  - [8. Example Programs](#8-example-programs)
     - [8.1 Hello World](#81-hello-world)
-    - [8.2 斐波那契数列](#82-斐波那契数列)
-    - [8.3 内存管理示例](#83-内存管理示例)
-    - [8.4 内联汇编示例](#84-内联汇编示例)
-  - [9. 常见问题](#9-常见问题)
-  - [10. 特性实现状态](#10-特性实现状态)
+    - [8.2 Fibonacci Sequence](#82-fibonacci-sequence)
+    - [8.3 Memory Management Example](#83-memory-management-example)
+    - [8.4 Inline Assembly Example](#84-inline-assembly-example)
+  - [9. FAQ](#9-faq)
+  - [10. Feature Implementation Status](#10-feature-implementation-status)
 
 ---
 
-## 1. 快速开始
+## 1. Quick Start
 
-### 1.1 编译编译器
+### 1.1 Compile the Compiler
 
 ```bash
 gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codegen_nasm.c src/preprocessor.c
 ```
 
-### 1.2 基本用法
+### 1.2 Basic Usage
 
 ```bash
-# 编译并运行（默认行为，生成C代码）
-./ecompiler.exe <源文件.e>
+# Compile and run (default behavior, generates C code)
+./ecompiler.exe <source.e>
 
-# 编译并运行（显式指定）
-./ecompiler.exe --run <源文件.e>
+# Compile and run (explicit)
+./ecompiler.exe --run <source.e>
 
-# 仅编译，不运行
-./ecompiler.exe --compile <源文件.e>
+# Compile only, don't run
+./ecompiler.exe --compile <source.e>
 
-# 仅检查错误，不编译或运行
-./ecompiler.exe --debug <源文件.e>
+# Check errors only, don't compile or run
+./ecompiler.exe --debug <source.e>
 
-# 生成NASM汇编代码并编译运行
-./ecompiler.exe --nasm <源文件.e>
+# Generate NASM assembly and compile/run
+./ecompiler.exe --nasm <source.e>
 ```
 
-### 1.3 命令行参数
+### 1.3 Command Line Arguments
 
-| 参数 | 类型 | 描述 |
-|------|------|------|
-| `--run` | 标志 | 编译并运行程序（默认行为） |
-| `--compile` | 标志 | 仅编译，不运行 |
-| `--debug` | 标志 | 仅检查语法错误，不生成代码 |
-| `--c` | 标志 | 生成C代码 |
-| `--nasm` | 标志 | 生成NASM汇编代码 |
-| `--ir` | 标志 | 生成中间表示（IR）代码 |
-| `--machine` | 标志 | 直接生成机器码（x86-64 Windows，不需要外部工具） |
-| `--windows` | 标志 | 指定目标平台为Windows（可与其他参数组合使用） |
-| `<源文件.e>` | 字符串 | 必需参数，指定输入的E语言源文件 |
+| Argument | Type | Description |
+|----------|------|-------------|
+| `--run` | flag | Compile and run the program (default) |
+| `--compile` | flag | Compile only, don't run |
+| `--debug` | flag | Check syntax errors only, don't generate code |
+| `--c` | flag | Generate C code |
+| `--nasm` | flag | Generate NASM assembly code |
+| `--ir` | flag | Generate Intermediate Representation (IR) code |
+| `--machine` | flag | Generate machine code directly (x86-64 Windows, no external tools needed) |
+| `--windows` | flag | Target Windows platform (can be combined with other flags) |
+| `<source.e>` | string | Required: input E language source file |
 
-#### 参数组合
+#### Argument Combinations
 
-| 组合示例 | 行为 |
-|---------|------|
-| `--run --c` | 生成C代码，编译并运行 |
-| `--compile --nasm` | 生成NASM汇编并编译，但不运行 |
-| `--machine --windows` | 直接生成Windows x86-64可执行文件（独立，不需要外部工具） |
-| `--debug --ir` | 检查语法错误（IR模式） |
+| Combination | Behavior |
+|-------------|----------|
+| `--run --c` | Generate C code, compile and run |
+| `--compile --nasm` | Generate NASM assembly and compile, don't run |
+| `--machine --windows` | Generate Windows x86-64 executable directly (standalone, no external tools) |
+| `--debug --ir` | Check syntax errors (IR mode) |
 
 ---
 
-## 2. 语言语法
+## 2. Language Syntax
 
-### 2.1 注释
+### 2.1 Comments
 
-E语言支持两种注释方式：
+E language supports two types of comments:
 
 ```e
-// 单行注释
+// Single-line comment
 
-/* 多行注释
-   可以跨越多行 */
+/* Multi-line comment
+   spanning multiple lines */
 
-/[ 另一种多行注释
-   语法 ]/
+/[ Another multi-line comment
+   syntax ]/
 ```
 
-### 2.2 变量声明
+### 2.2 Variable Declaration
 
-变量声明语法：`类型 变量名 [= 值];`
+Syntax: `type variable_name [= value];`
 
 ```e
-// 基本变量声明
+// Basic variable declarations
 int a = 10;
 float b = 3.14;
 double c = 2.718;
@@ -144,85 +144,85 @@ string d = "Hello World";
 char e = 'A';
 dir f = "C:\\Test\\file.txt";
 
-// 无初始值声明
+// Declaration without initial value
 int x;
 float y;
 ```
 
-#### 变量命名规则
+#### Variable Naming Rules
 
-- 变量名必须以字母或下划线开头
-- 变量名只能包含字母、数字和下划线
-- 变量名区分大小写
-- 不能使用关键字作为变量名
+- Must start with a letter or underscore
+- Can only contain letters, numbers, and underscores
+- Case-sensitive
+- Cannot use keywords as variable names
 
-### 2.3 数据类型
+### 2.3 Data Types
 
-| 类型 | 描述 | 大小（字节） | C等价类型 |
-|------|------|------------|-----------|
-| `int` | 有符号整数 | 4 | `int` |
-| `float` | 单精度浮点数 | 4 | `float` |
-| `double` | 双精度浮点数 | 8 | `double` |
-| `string` | 字符串 | 可变 | `char*` |
-| `char` | 单个字符 | 1 | `char` |
-| `dir` | 文件路径 | 可变 | `char*` |
-| `po <type>` | 指向指定类型的指针 | 8 (64位) | `type*` |
-| `mem` | 内存块 | 可变 | `void*` |
+| Type | Description | Size (bytes) | C Equivalent |
+|------|-------------|-------------|--------------|
+| `int` | Signed integer | 4 | `int` |
+| `float` | Single-precision float | 4 | `float` |
+| `double` | Double-precision float | 8 | `double` |
+| `string` | String | variable | `char*` |
+| `char` | Single character | 1 | `char` |
+| `dir` | File path | variable | `char*` |
+| `po <type>` | Pointer to specified type | 8 (64-bit) | `type*` |
+| `mem` | Memory block | variable | `void*` |
 
-### 2.4 函数定义
+### 2.4 Function Definition
 
-**语法：** `func [返回类型] 函数名(参数列表) { 函数体 } [=> 别名];`
+**Syntax:** `func [return_type] function_name(parameters) { body } [=> alias];`
 
 ```e
-// 带返回类型的函数
+// Function with return type
 func float addFloat(float a, float b) {
     return a + b;
 }
 
-// 无返回类型（默认为int）
+// Function without return type (defaults to int)
 func addInt(int a, int b) {
     return a + b;
 }
 
-// 无参数函数
+// Function without parameters
 func sayHello() {
     eout >namespace std "Hello!" & endl;
 }
 
-// 函数别名
+// Function alias
 func subtract(int x, int y) {
     return x - y;
-} => sub;  // 注意：这里要加分号
+} => sub;  // Note: semicolon required here
 ```
 
-#### 函数调用
+#### Function Calls
 
 ```e
 float result1 = addFloat(1.5, 2.5);
 int result2 = addInt(10, 20);
-int result3 = sub(5, 3);  // 使用函数别名
+int result3 = sub(5, 3);  // Use function alias
 ```
 
-#### 参数规则
+#### Parameter Rules
 
-| 规则 | 说明 |
-|------|------|
-| 参数顺序 | 从左到右依次传递 |
-| 参数类型 | 必须显式声明 |
-| 参数数量 | 无限制 |
-| 参数命名 | 遵循变量命名规则 |
+| Rule | Description |
+|------|-------------|
+| Order | Passed left to right |
+| Type | Must be explicitly declared |
+| Count | Unlimited |
+| Naming | Follows variable naming rules |
 
-#### 返回值规则
+#### Return Value Rules
 
-| 情况 | 行为 |
-|------|------|
-| 显式返回 | 使用 `return` 语句 |
-| 无return语句 | 默认返回0 |
-| 返回类型不匹配 | 编译器警告，隐式类型转换 |
+| Case | Behavior |
+|------|----------|
+| Explicit return | Use `return` statement |
+| No return statement | Returns 0 by default |
+| Type mismatch | Compiler warning, implicit conversion |
 
-### 2.5 控制流
+### 2.5 Control Flow
 
-#### if-else 语句
+#### if-else Statement
 
 ```e
 if (x > 0) {
@@ -234,7 +234,7 @@ if (x > 0) {
 }
 ```
 
-#### while 循环
+#### while Loop
 
 ```e
 int i = 0;
@@ -244,7 +244,7 @@ while (i < 10) {
 }
 ```
 
-#### for 循环
+#### for Loop
 
 ```e
 int sum = 0;
@@ -253,7 +253,7 @@ for (int i = 0; i < 10; i++) {
 }
 ```
 
-#### switch-case 语句
+#### switch-case Statement
 
 ```e
 func main() {
@@ -272,42 +272,42 @@ func main() {
 }
 ```
 
-**switch-case特性：**
-- 支持 `case` 分支匹配常量值
-- 支持 `default` 分支处理未匹配的情况
-- 每个 `case` 需要用 `break` 终止，否则会执行下一个分支（穿透）
-- `case` 中的值必须是常量（不能是变量）
+**switch-case Features:**
+- Supports `case` branches matching constant values
+- Supports `default` branch for unmatched cases
+- Each `case` needs `break` to terminate, otherwise falls through
+- Values in `case` must be constants (cannot be variables)
 
-**break语句：**
+**break Statement:**
 ```e
 func main() {
     for (int i = 0; i < 10; i++) {
         if (i == 5) {
-            break;  // 退出循环
+            break;  // Exit loop
         }
         eout >namespace std string(i) & ", ";
     }
-    // 输出: 0, 1, 2, 3, 4,
+    // Output: 0, 1, 2, 3, 4,
 }
 ```
 
-### 2.6 输入输出
+### 2.6 Input Output
 
-#### 输出
+#### Output
 
 ```e
-// 输出到标准输出
+// Output to standard output
 eout >namespace std "Hello World" & endl;
 eout >namespace std "Number: " & string(42) & endl;
 
-// 输出多个值
+// Output multiple values
 eout >namespace std "Name: " & name & ", Age: " & string(age) & endl;
 ```
 
-#### 输入
+#### Input
 
 ```e
-// 从标准输入读取
+// Read from standard input
 string name;
 ein >namespace std "Enter your name: " => name;
 
@@ -315,121 +315,121 @@ int age;
 ein >namespace std "Enter your age: " => age;
 ```
 
-### 2.7 类型转换
+### 2.7 Type Conversion
 
-E语言支持显式类型转换：
+E language supports explicit type conversion:
 
 ```e
-// 整数转字符串
-string(123);      // 返回 "123"
-string(45.67);    // 返回 "45.67"
+// Integer to string
+string(123);      // Returns "123"
+string(45.67);    // Returns "45.67"
 
-// 字符串转整数
-int("123");       // 返回 123
-int("45.67");     // 返回 45（截断小数）
+// String to integer
+int("123");       // Returns 123
+int("45.67");     // Returns 45 (truncates decimal)
 
-// 整数转字符
-char(65);         // 返回 'A'
+// Integer to character
+char(65);         // Returns 'A'
 
-// 字符串转路径
-dir("C:\\Path");  // 返回路径字符串
+// String to path
+dir("C:\\Path");  // Returns path string
 ```
 
-### 2.8 字符串操作
+### 2.8 String Operations
 
-#### 字符串拼接
+#### String Concatenation
 
-使用 `&` 操作符拼接字符串：
+Use `&` operator to concatenate strings:
 
 ```e
 string greeting = "Hello" & " " & "World";
 string info = "Name: " & name & ", Age: " & string(age);
 ```
 
-#### 字符串插值
+#### String Interpolation
 
-使用 `{{表达式}}` 语法在字符串中进行插值：
+Use `{{expression}}` syntax for string interpolation:
 
 ```e
 int x = 42;
-string message = "The answer is {{string(x)}}";  // 编译时生成 "The answer is 42"
+string message = "The answer is {{string(x)}}";  // Compiles to "The answer is 42"
 
-dir path = "test_{{string(x)}}.txt";  // 生成 "test_42.txt"
+dir path = "test_{{string(x)}}.txt";  // Generates "test_42.txt"
 ```
 
-### 2.9 指针和内存管理
+### 2.9 Pointers and Memory Management
 
-#### 指针类型声明
+#### Pointer Type Declaration
 
 ```e
-// 声明一个指向整数的指针
+// Declare a pointer to integer
 po int ptr;
 
-// 声明一个指向结构体的指针
+// Declare a pointer to struct
 po Point ptr2;
 
-// 声明一个内存块
+// Declare a memory block
 mem buffer;
 ```
 
-#### 内存分配与释放
+#### Memory Allocation and Deallocation
 
 ```e
-// 分配1024字节内存
+// Allocate 1024 bytes
 mem buffer = alloc(1024);
 
-// 分配一个 int 大小的内存，并将指针指向它
+// Allocate memory for one int
 po int ptr = alloc(int);
 
-// 释放内存
+// Free memory
 free(buffer);
 free(ptr);
 ```
 
-#### 指针操作
+#### Pointer Operations
 
 ```e
-// 解引用
-ptr.value = 100;    // 相当于 C 语言的 *ptr = 100
-int a = ptr.value;  // 相当于 C 语言的 a = *ptr
+// Dereference
+ptr.value = 100;    // Equivalent to *ptr = 100 in C
+int a = ptr.value;  // Equivalent to a = *ptr in C
 
-// 取地址
+// Address-of
 int var = 10;
-po int ptr = &var;   // ptr 指向 var
+po int ptr = &var;   // ptr points to var
 
-// 指针运算
+// Pointer arithmetic
 po int start = &arr[0];
-po int end = start + 10;  // 向后移动10个int
+po int end = start + 10;  // Move 10 ints forward
 
-// 内存块转字符串
+// Memory block to string
 mem buffer = alloc(50);
-string content = string(buffer); // 将内存内容视为字符串
+string content = string(buffer); // Treat memory as string
 ```
 
-#### 内存安全
+#### Memory Safety
 
 ```e
 func test() {
-    mem buf = alloc(10);   // buf 拥有内存
-    mem buf2 = buf;        // 所有权转移给 buf2, buf 自动变为 null
-    free(buf2);            // 正确释放
-} // 编译成功，因为 buf2 已经被释放了
+    mem buf = alloc(10);   // buf owns memory
+    mem buf2 = buf;        // Ownership transferred to buf2, buf becomes null
+    free(buf2);            // Correctly freed
+} // Compiles successfully, buf2 was freed
 ```
 
-### 2.10 结构体和枚举
+### 2.10 Structs and Enums
 
-#### 枚举
+#### Enum
 
 ```e
 enum Color {
-    RED,      // 值为 0
-    GREEN,    // 值为 1
-    BLUE = 5, // 值为 5
-    YELLOW    // 值为 6
+    RED,      // Value is 0
+    GREEN,    // Value is 1
+    BLUE = 5, // Value is 5
+    YELLOW    // Value is 6
 };
 ```
 
-#### 结构体
+#### Struct
 
 ```e
 struct Point {
@@ -443,7 +443,7 @@ struct Rectangle {
 };
 ```
 
-#### 使用结构体
+#### Using Structs
 
 ```e
 Point p1;
@@ -457,9 +457,9 @@ rect.bottomRight.x = 100;
 rect.bottomRight.y = 200;
 ```
 
-### 2.11 对象
+### 2.11 Objects
 
-E语言支持对象（单例模式），通过 `object` 关键字定义：
+E language supports objects (singleton pattern), defined with `object` keyword:
 
 ```e
 object config {
@@ -474,40 +474,40 @@ object user {
 }
 ```
 
-#### 使用对象
+#### Using Objects
 
-对象定义后自动创建全局实例，可以直接访问：
+Objects automatically create a global instance when defined, accessible directly:
 
 ```e
 func main() {
     println("config.version = " & string(config.version));
     println("config.name = " & config.name);
     
-    // 修改对象属性
+    // Modify object properties
     config.version = 2;
     user.username = "root";
 }
 ```
 
-对象特性：
-- 对象定义后自动创建单例实例
-- 支持基本类型作为成员
-- 成员可以有默认值
-- 使用 `.` 操作符访问成员
+Object Features:
+- Singleton instance created automatically when object is defined
+- Supports basic types as members
+- Members can have default values
+- Use `.` operator to access members
 
-### 2.12 源文件导入（import）
+### 2.12 Source File Import
 
-使用 `import` 语句可以引入其他 `.e` 源文件。被导入文件中的函数和变量可以在当前文件中直接使用。
+Use `import` statement to include other `.e` source files. Functions and variables from imported files can be used directly.
 
-**语法：**
+**Syntax:**
 
 ```e
 import "filename.e";
 ```
 
-**示例：**
+**Example:**
 
-创建 `utils.e` 文件：
+Create `utils.e`:
 ```e
 // utils.e
 int global_var = 100;
@@ -521,130 +521,130 @@ func add(int a, int b) {
 }
 ```
 
-在主文件中使用：
+Use in main file:
 ```e
 import "utils.e";
 
 func main() {
-    say_hello();  // 调用 utils.e 中的函数
-    int result = add(10, 20);  // 使用函数
+    say_hello();  // Call function from utils.e
+    int result = add(10, 20);  // Use function
     eout >namespace std "Result: " & string(result) & "\n";
 }
 ```
 
-### 2.13 内联汇编
+### 2.13 Inline Assembly
 
-E语言支持内联汇编，可以直接编写NASM风格的汇编代码。
+E language supports inline assembly with NASM-style syntax.
 
-**语法：**
+**Syntax:**
 
 ```e
 asm(''
-    ; 汇编代码
-'')[索引]
+    ; Assembly code
+'')[index]
 ```
 
-**特性：**
+**Features:**
 
-- 使用 `''` 双单引号包围汇编代码（支持多行）
-- 虚拟通讯寄存器 `xl` 和 `xh` 用于在汇编和E语言之间传递数据
-- 可以调用E语言函数和内置函数
-- 返回值是一个数组：`[xl的值, xh的值]`
+- Use `''` double single-quotes to enclose assembly code (supports multiple lines)
+- Virtual communication registers `xl` and `xh` for passing data between assembly and E language
+- Can call E language functions and built-in functions
+- Return value is an array: `[xl_value, xh_value]`
 
-**示例：**
+**Example:**
 
 ```e
 func main() {
-    // 基本汇编操作
+    // Basic assembly operation
     int result = asm(''
         mov rax, 42;
         mov rbx, 10;
         add rax, rbx;
     '');
-    eout >namespace std string(result) & endl;  // 输出 52
+    eout >namespace std string(result) & endl;  // Output 52
     
-    // 使用虚拟寄存器
+    // Use virtual registers
     asm(''
-        mov xl, 100;   // 存储到 xl
-        mov xh, 200;   // 存储到 xh
+        mov xl, 100;   // Store to xl
+        mov xh, 200;   // Store to xh
     '');
     
-    int a = asm(''mov rax, xl;'');  // 读取 xl 的值
-    int b = asm(''mov rax, xh;'');  // 读取 xh 的值
-    eout >namespace std string(a) & ", " & string(b) & endl;  // 输出 100, 200
+    int a = asm(''mov rax, xl;'');  // Read xl value
+    int b = asm(''mov rax, xh;'');  // Read xh value
+    eout >namespace std string(a) & ", " & string(b) & endl;  // Output 100, 200
     
-    // 使用数组索引访问返回值
-    int xl_val = asm(''mov xl, "Hello";'')[0];  // 获取 xl 的值
-    eout >namespace std xl_val & endl;  // 输出 Hello
+    // Access return value using array index
+    int xl_val = asm(''mov xl, "Hello";'')[0];  // Get xl value
+    eout >namespace std xl_val & endl;  // Output Hello
 }
 ```
 
-**汇编指令支持：**
+**Supported Assembly Instructions:**
 
-| 类别 | 指令 |
-|------|------|
-| 数据传输 | `mov`, `push`, `pop`, `lea` |
-| 算术运算 | `add`, `sub`, `mul`, `div`, `imul`, `idiv` |
-| 逻辑运算 | `and`, `or`, `xor`, `not` |
-| 控制流 | `jmp`, `je`, `jne`, `cmp`, `call`, `ret` |
+| Category | Instructions |
+|----------|--------------|
+| Data Transfer | `mov`, `push`, `pop`, `lea` |
+| Arithmetic | `add`, `sub`, `mul`, `div`, `imul`, `idiv` |
+| Logical | `and`, `or`, `xor`, `not` |
+| Control Flow | `jmp`, `je`, `jne`, `cmp`, `call`, `ret` |
 
-**虚拟寄存器：**
+**Virtual Registers:**
 
-| 寄存器 | 用途 | 存储位置 |
-|--------|------|----------|
-| `xl` | 虚拟通讯寄存器1 | `[rbp - 808]` |
-| `xh` | 虚拟通讯寄存器2 | `[rbp - 816]` |
+| Register | Purpose | Storage Location |
+|----------|---------|-----------------|
+| `xl` | Virtual communication register 1 | `[rbp - 808]` |
+| `xh` | Virtual communication register 2 | `[rbp - 816]` |
 
-**函数调用语法：**
+**Function Call Syntax:**
 
 ```e
 asm(''
-    ; 调用外部函数，参数使用 _寄存器 语法
-    call string, _ah;  // 调用 string 函数，参数是寄存器 ah
+    ; Call external function, use _register syntax for parameters
+    call string, _ah;  // Call string function with parameter in ah
     
-    ; 调用 eout 内置函数
-    call eout [std] _al & _ah & endl;  // []内是命名空间
+    ; Call eout built-in function
+    call eout [std] _al & _ah & endl;  // [] contains namespace
 '');
 ```
 
-### 2.14 字符串插值
+### 2.14 String Interpolation
 
-字符串中可以使用 `{{expression}}` 语法进行插值计算：
+Use `{{expression}}` syntax in strings for interpolation:
 
 ```e
 int x = 42;
-dir path = "test_{{string(x)}}.txt";  // 编译时生成 "test_42.txt"
-eout >namespace std "Hello {{string(x)}}!" & endl;  // 输出 "Hello 42!"
+dir path = "test_{{string(x)}}.txt";  // Compiles to "test_42.txt"
+eout >namespace std "Hello {{string(x)}}!" & endl;  // Output "Hello 42!"
 ```
 
 ### 2.15 File I/O
 
-使用 `dir` 类型的路径可以实现文件输入输出：
+Use `dir` type paths for file input/output:
 
 ```e
-// 文件输出
+// File output
 dir path = "output.txt";
 eout >namespace path "Hello World!" & endl;
 
-// 文件输入
+// File input
 string content = "";
 ein >namespace path "" => content;
 eout >namespace std "Content: " & content & "\n";
 ```
 
-### 2.16 宏系统
+### 2.16 Macro System
 
-E语言支持强大的**两级宏系统**：
-- **一级宏**：基于文本替换，类似C语言的预处理器
-- **二级宏**：基于AST操作，支持高级语法扩展
+E language supports a powerful **two-level macro system**:
+- **Level 1 macros**: Text-based substitution, similar to C preprocessor
+- **Level 2 macros**: AST-based operations, supporting advanced syntax extensions
 
 ---
 
-#### 2.15.1 一级宏（Level 1）
+#### 2.16.1 Level 1 Macros
 
-一级宏使用 `#` 前缀，进行纯文本替换。
+Level 1 macros use `#` prefix for pure text substitution.
 
-##### 常量宏
+##### Constant Macros
 
 ```e
 #define PI 3.14159
@@ -657,7 +657,7 @@ func main() {
 }
 ```
 
-##### 函数宏
+##### Function Macros
 
 ```e
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -670,22 +670,22 @@ func main() {
 }
 ```
 
-##### 字符串化操作符
+##### Stringification Operator
 
-使用 `#x` 将参数转换为字符串字面量：
+Use `#x` to convert parameter to string literal:
 
 ```e
 #define PRINT(x) eout >namespace std #x & " = " & string(x) & endl
 
 func main() {
     int value = 42;
-    PRINT(value);  // 输出: value = 42
+    PRINT(value);  // Output: value = 42
 }
 ```
 
-##### 拼接操作符
+##### Concatenation Operator
 
-使用 `a##b` 拼接两个标识符：
+Use `a##b` to concatenate two identifiers:
 
 ```e
 #define CONCAT(a, b) a##b
@@ -693,37 +693,37 @@ func main() {
 
 func main() {
     int my_value = 100;
-    int CONCAT(val, ue) = 200;  // 等价于 int value = 200;
+    int CONCAT(val, ue) = 200;  // Equivalent to int value = 200;
 }
 ```
 
-##### 宏作用域管理
+##### Macro Scope Management
 
-使用 `#push` 和 `#pop` 管理宏作用域：
+Use `#push` and `#pop` to manage macro scope:
 
 ```e
 #define X 100
-eout >namespace std string(X) & endl;  // 输出 100
+eout >namespace std string(X) & endl;  // Output 100
 
 #push
 #define X 200
-eout >namespace std string(X) & endl;  // 输出 200
+eout >namespace std string(X) & endl;  // Output 200
 #pop
 
-eout >namespace std string(X) & endl;  // 输出 100
+eout >namespace std string(X) & endl;  // Output 100
 ```
 
-##### 宏取消定义
+##### Macro Undefine
 
 ```e
 #define TEMP 123
 eout >namespace std string(TEMP) & endl;
 
 #undef TEMP
-// TEMP 已不再可用
+// TEMP is no longer available
 ```
 
-##### 条件编译
+##### Conditional Compilation
 
 ```e
 #define DEBUG 1
@@ -747,40 +747,40 @@ eout >namespace std string(TEMP) & endl;
 
 ---
 
-#### 2.15.2 二级宏（Level 2）
+#### 2.16.2 Level 2 Macros
 
-二级宏使用 `##$` 前缀，在编译时操作抽象语法树（AST），支持强大的语言扩展能力。
+Level 2 macros use `##$` prefix to operate on Abstract Syntax Trees (AST) during compilation, enabling powerful language extensions.
 
-##### 二级宏的基本结构
+##### Level 2 Macro Structure
 
 ```e
-##$ 宏名: 类型;
-    [字段: 值];
-    [字段: 值];
+##$ macro_name: type;
+    [field: value];
+    [field: value];
     exec: {
-        // 执行代码
+        // Execution code
         return ...;
     };
 ```
 
-##### 支持的宏类型
+##### Supported Macro Types
 
-| 类型 | 描述 |
-|------|------|
-| `keyword` | 关键字宏 |
-| `function` | 函数宏 |
-| `operator` | 运算符宏 |
-| `syntax` | 语法宏 |
-| `typedef` | 类型定义宏 |
+| Type | Description |
+|------|-------------|
+| `keyword` | Keyword macro |
+| `function` | Function macro |
+| `operator` | Operator macro |
+| `syntax` | Syntax macro |
+| `typedef` | Type definition macro |
 
 ---
 
-##### 语法宏（syntax）
+##### Syntax Macro
 
-语法宏使用 `pattern` 定义匹配模式，支持 `${参数}` 语法捕获匹配内容。
+Syntax macros use `pattern` to define matching patterns, supporting `${parameter}` syntax to capture matched content.
 
 ```e
-// 定义 unless 语句
+// Define unless statement
 ##$ unless: syntax;
     pattern: "unless (${cond}) { ${body} }";
     exec: {
@@ -795,15 +795,15 @@ func main() {
 }
 ```
 
-**pattern 语法**：
-- `${name}` - 捕获任意表达式或语句
-- 支持任意嵌套的花括号
+**Pattern Syntax**:
+- `${name}` - Capture any expression or statement
+- Supports nested curly braces
 
 ---
 
-##### 类型宏（typedef）
+##### Type Macro
 
-类型宏使用 `fields` 定义字段，可以动态创建结构体类型。
+Type macros use `fields` to define fields, enabling dynamic struct type creation.
 
 ```e
 ##$ vec3: typedef;
@@ -822,9 +822,9 @@ func main() {
 
 ---
 
-##### 函数宏（function）
+##### Function Macro
 
-函数宏使用 `param` 定义参数列表，支持默认参数。
+Function macros use `param` to define parameter lists, supporting default parameters.
 
 ```e
 ##$ range: function;
@@ -843,12 +843,12 @@ func main() {
 
 ---
 
-##### 运算符宏（operator）
+##### Operator Macro
 
-运算符宏使用 `precedence` 和 `associativity` 定义运算符特性。
+Operator macros use `precedence` and `associativity` to define operator properties.
 
 ```e
-// 定义幂运算符
+// Define power operator
 ##$ **: operator;
     precedence: 14;
     associativity: right;
@@ -857,65 +857,65 @@ func main() {
     };
 
 func main() {
-    int result = 2 ** 8;  // 计算 2 的 8 次方
+    int result = 2 ** 8;  // Calculate 2 to the power of 8
     eout >namespace std "2^8 = " & string(result) & endl;
 }
 ```
 
-**precedence 优先级**：数值越大优先级越高
+**Precedence**: Higher value means higher priority
 
-**associativity 结合性**：
-- `left` - 左结合
-- `right` - 右结合
-
----
-
-#### 2.15.3 二级宏的 exec 块
-
-`exec` 块是二级宏的核心，支持以下 AST 操作函数：
-
-| 函数 | 描述 |
-|------|------|
-| `ast_create_if(cond, then, else)` | 创建 if 语句 |
-| `ast_create_call(name, args...)` | 创建函数调用 |
-| `ast_create_struct(name, fields)` | 创建结构体定义 |
-| `ast_create_not(expr)` | 创建逻辑非表达式 |
-| `ast_create_range_loop(start, end, step)` | 创建范围循环 |
-
-**注意**：二级宏在预处理器阶段仅被定义和收集，实际的 AST 转换在编译后期执行。
+**Associativity**:
+- `left` - Left-associative
+- `right` - Right-associative
 
 ---
 
-#### 2.15.4 宏的处理流程
+#### 2.16.3 Level 2 Macro exec Block
+
+The `exec` block is the core of level 2 macros, supporting the following AST manipulation functions:
+
+| Function | Description |
+|----------|-------------|
+| `ast_create_if(cond, then, else)` | Create if statement |
+| `ast_create_call(name, args...)` | Create function call |
+| `ast_create_struct(name, fields)` | Create struct definition |
+| `ast_create_not(expr)` | Create logical not expression |
+| `ast_create_range_loop(start, end, step)` | Create range loop |
+
+**Note**: Level 2 macros are only defined and collected during preprocessing; actual AST transformation occurs later in compilation.
+
+---
+
+#### 2.16.4 Macro Processing Flow
 
 ```
-源文件 (.e)
+Source file (.e)
     ↓
-预处理器 (Lexer)
+Preprocessor (Lexer)
     ↓
-一级宏展开 (文本替换)
+Level 1 Macro Expansion (text substitution)
     ↓
-二级宏收集 (解析宏定义)
+Level 2 Macro Collection (parse macro definitions)
     ↓
-语法分析 (Parser) → AST
+Syntax Analysis (Parser) → AST
     ↓
-二级宏转换 (AST操作)
+Level 2 Macro Transformation (AST operations)
     ↓
-代码生成 (Code Generator)
+Code Generation (Code Generator)
     ↓
-目标代码 (.c 或 .asm)
+Target Code (.c or .asm)
 ```
 
 ---
 
-#### 2.15.5 完整的宏示例
+#### 2.16.5 Complete Macro Example
 
 ```e
-// 一级宏示例
+// Level 1 macro example
 #define PI 3.14159
 #define SQUARE(x) ((x) * (x))
 
-// 二级宏示例
+// Level 2 macro example
 ##$ unless: syntax;
     pattern: "unless (${cond}) { ${body} }";
     exec: {
@@ -929,17 +929,17 @@ func main() {
     };
 
 func main() {
-    // 使用一级宏
+    // Use level 1 macro
     float radius = 5.0;
     float area = PI * SQUARE(radius);
     
-    // 使用二级宏定义的类型
+    // Use type defined by level 2 macro
     vec3 pos;
     pos.x = 10.0;
     pos.y = 20.0;
     pos.z = 30.0;
     
-    // 使用二级宏定义的语法
+    // Use syntax defined by level 2 macro
     unless (area > 100.0) {
         eout >namespace std "Area is small" & endl;
     }
@@ -948,253 +948,253 @@ func main() {
 
 ---
 
-## 3. 操作符参考
+## 3. Operator Reference
 
-### 3.1 算术操作符
+### 3.1 Arithmetic Operators
 
-| 操作符 | 描述 | 优先级 | 结合性 |
-|--------|------|--------|--------|
-| `+` | 加法 | 中 | 左 |
-| `-` | 减法 | 中 | 左 |
-| `*` | 乘法 | 高 | 左 |
-| `/` | 除法 | 高 | 左 |
-| `%` | 取模 | 高 | 左 |
+| Operator | Description | Precedence | Associativity |
+|----------|-------------|------------|---------------|
+| `+` | Addition | medium | left |
+| `-` | Subtraction | medium | left |
+| `*` | Multiplication | high | left |
+| `/` | Division | high | left |
+| `%` | Modulo | high | left |
 
-### 3.2 比较操作符
+### 3.2 Comparison Operators
 
-| 操作符 | 描述 | 优先级 | 结合性 |
-|--------|------|--------|--------|
-| `==` | 等于 | 低 | 左 |
-| `!=` | 不等于 | 低 | 左 |
-| `<` | 小于 | 低 | 左 |
-| `<=` | 小于等于 | 低 | 左 |
-| `>` | 大于 | 低 | 左 |
-| `>=` | 大于等于 | 低 | 左 |
+| Operator | Description | Precedence | Associativity |
+|----------|-------------|------------|---------------|
+| `==` | Equal | low | left |
+| `!=` | Not equal | low | left |
+| `<` | Less than | low | left |
+| `<=` | Less than or equal | low | left |
+| `>` | Greater than | low | left |
+| `>=` | Greater than or equal | low | left |
 
-### 3.3 逻辑操作符
+### 3.3 Logical Operators
 
-| 操作符 | 描述 | 优先级 | 结合性 |
-|--------|------|--------|--------|
-| `&&` | 逻辑与 | 低 | 左 |
-| `\|\|` | 逻辑或 | 低 | 左 |
-| `!` | 逻辑非 | 高 | 右 |
+| Operator | Description | Precedence | Associativity |
+|----------|-------------|------------|---------------|
+| `&&` | Logical AND | low | left |
+| `\|\|` | Logical OR | low | left |
+| `!` | Logical NOT | high | right |
 
-### 3.4 赋值操作符
+### 3.4 Assignment Operators
 
-| 操作符 | 描述 | 优先级 | 结合性 |
-|--------|------|--------|--------|
-| `=` | 赋值 | 最低 | 右 |
-| `=>` | 赋值（函数返回） | 最低 | 右 |
+| Operator | Description | Precedence | Associativity |
+|----------|-------------|------------|---------------|
+| `=` | Assignment | lowest | right |
+| `=>` | Assignment (function return) | lowest | right |
 
-### 3.5 字符串操作符
+### 3.5 String Operators
 
-| 操作符 | 描述 | 优先级 | 结合性 |
-|--------|------|--------|--------|
-| `&` | 字符串拼接 | 低 | 左 |
+| Operator | Description | Precedence | Associativity |
+|----------|-------------|------------|---------------|
+| `&` | String concatenation | low | left |
 
-### 3.6 指针操作符
+### 3.6 Pointer Operators
 
-| 操作符 | 描述 | 优先级 | 结合性 |
-|--------|------|--------|--------|
-| `&` | 取地址 | 高 | 右 |
-| `.value` | 解引用 | 高 | 左 |
-
----
-
-## 4. 编译器行为
-
-### 4.1 编译流程
-
-```
-源文件 (.e)
-    ↓
-词法分析 (Lexer) → Token流
-    ↓
-语法分析 (Parser) → AST
-    ↓
-语义分析 (Symbol Table)
-    ↓
-代码生成 (Code Generator)
-    ↓
-    ├─→ C代码 (.c) → gcc → 可执行文件
-    ├─→ NASM汇编 (.asm) → nasm/ld → 可执行文件
-    ├─→ 中间表示 (.ir)
-    └─→ 机器码 (.exe) → 直接生成Windows x86-64可执行文件（不需要外部工具）
-```
-
-#### IR到机器码的生成流程
-
-```
-AST节点
-    ↓
-IR生成器 → 跨平台中间表示
-    ↓
-机器码生成器 → x86-64指令
-    ↓
-PE文件构建器 → DOS头 + COFF头 + 可选头 + 节表 + 节数据
-    ↓
-output.exe (完整的Windows可执行文件)
-```
-
-### 4.2 符号表管理
-
-编译器维护一个符号表来跟踪变量和函数的作用域：
-
-| 作用域类型 | 描述 |
-|-----------|------|
-| 全局作用域 | 函数外部声明的变量和函数 |
-| 局部作用域 | 函数内部声明的变量 |
-| 块作用域 | 控制流语句（if、for、while）内部的变量 |
-
-### 4.3 错误处理机制
-
-编译器采用"错误恢复"策略，即使遇到错误也会继续分析：
-
-1. **错误检测**：在词法、语法、语义分析阶段检测错误
-2. **错误报告**：记录错误位置（行号、列号）和错误类型
-3. **错误恢复**：尝试跳过当前语句继续分析
-4. **错误汇总**：编译结束时输出所有错误信息
-
-### 4.4 代码生成策略
-
-#### C代码生成
-
-- 使用 `sprintf` 实现类型转换
-- 使用 `printf` 和 `scanf` 实现输入输出
-- 使用 `malloc` 和 `free` 实现内存管理
-
-#### NASM汇编生成（x86-64）
-
-- 使用COFF格式（Windows）或ELF格式（Linux）
-- 使用栈传递参数
-- 使用系统V调用约定
-- 自动管理栈帧
-
-#### 中间表示（IR）生成
-
-- 使用类汇编的跨平台语法
-- 支持字符串收集和函数定义
-- 支持控制流（if、while、for、switch）
-- 统一的指令集（load、store、add、sub、print等）
-
-#### 机器码生成（x86-64 Windows）
-
-- **独立实现，不依赖外部工具
-- 直接生成完整的PE文件格式
-- 包含DOS头、COFF头、可选头、节表
-- 支持.text、.data、.rdata节
-- 导入表导入KERNEL32.dll函数（WriteFile、ExitProcess）
-- 直接生成x86-64指令码
-- 文件体积小（约6.5KB）
+| Operator | Description | Precedence | Associativity |
+|----------|-------------|------------|---------------|
+| `&` | Address-of | high | right |
+| `.value` | Dereference | high | left |
 
 ---
 
-## 5. 边缘情况处理
+## 4. Compiler Behavior
 
-### 5.1 变量相关
+### 4.1 Compilation Process
 
-| 情况 | 处理方式 |
+```
+Source file (.e)
+    ↓
+Lexical Analysis (Lexer) → Token stream
+    ↓
+Syntax Analysis (Parser) → AST
+    ↓
+Semantic Analysis (Symbol Table)
+    ↓
+Code Generation (Code Generator)
+    ↓
+    ├─→ C code (.c) → gcc → Executable
+    ├─→ NASM assembly (.asm) → nasm/ld → Executable
+    ├─→ Intermediate Representation (.ir)
+    └─→ Machine code (.exe) → Directly generate Windows x86-64 executable (no external tools needed)
+```
+
+#### IR to Machine Code Generation Process
+
+```
+AST Node
+    ↓
+IR Generator → Cross-platform Intermediate Representation
+    ↓
+Machine Code Generator → x86-64 Instructions
+    ↓
+PE File Builder → DOS Header + COFF Header + Optional Header + Section Table + Section Data
+    ↓
+output.exe (Complete Windows executable)
+```
+
+### 4.2 Symbol Table Management
+
+The compiler maintains a symbol table to track variable and function scopes:
+
+| Scope Type | Description |
+|------------|-------------|
+| Global Scope | Variables and functions declared outside functions |
+| Local Scope | Variables declared inside functions |
+| Block Scope | Variables inside control flow statements (if, for, while) |
+
+### 4.3 Error Handling Mechanism
+
+The compiler uses an "error recovery" strategy, continuing analysis even when errors are encountered:
+
+1. **Error Detection**: Detect errors during lexical, syntax, and semantic analysis
+2. **Error Reporting**: Record error location (line, column) and error type
+3. **Error Recovery**: Attempt to skip current statement and continue
+4. **Error Summary**: Output all error messages at the end of compilation
+
+### 4.4 Code Generation Strategy
+
+#### C Code Generation
+
+- Use `sprintf` for type conversion
+- Use `printf` and `scanf` for input/output
+- Use `malloc` and `free` for memory management
+
+#### NASM Assembly Generation (x86-64)
+
+- Use COFF format (Windows) or ELF format (Linux)
+- Use stack for parameter passing
+- Use System V calling convention
+- Automatic stack frame management
+
+#### Intermediate Representation (IR) Generation
+
+- Use assembly-like cross-platform syntax
+- Supports string collection and function definitions
+- Supports control flow (if, while, for, switch)
+- Unified instruction set (load, store, add, sub, print, etc.)
+
+#### Machine Code Generation (x86-64 Windows)
+
+- **Standalone implementation, no external tools required
+- Directly generates complete PE file format
+- Includes DOS header, COFF header, optional header, section table
+- Supports .text, .data, .rdata sections
+- Imports KERNEL32.dll functions (WriteFile, ExitProcess)
+- Directly generates x86-64 instruction bytes
+- Small file size (approximately 6.5KB)
+
+---
+
+## 5. Edge Case Handling
+
+### 5.1 Variable Related
+
+| Case | Handling |
 |------|----------|
-| 未声明变量引用 | 报错："Undefined symbol" |
-| 重复变量声明 | 报错："Redefinition of symbol" |
-| 未初始化变量使用 | 警告："Using uninitialized variable" |
-| 变量名冲突（作用域嵌套） | 内层变量遮蔽外层变量 |
+| Undeclared variable reference | Error: "Undefined symbol" |
+| Duplicate variable declaration | Error: "Redefinition of symbol" |
+| Uninitialized variable use | Warning: "Using uninitialized variable" |
+| Variable name conflict (nested scopes) | Inner variable shadows outer variable |
 
-### 5.2 函数相关
+### 5.2 Function Related
 
-| 情况 | 处理方式 |
+| Case | Handling |
 |------|----------|
-| 未定义函数调用 | 报错："Undefined function" |
-| 参数数量不匹配 | 报错："Argument count mismatch" |
-| 参数类型不匹配 | 警告并尝试隐式转换 |
-| 递归函数调用 | 支持（无特殊限制） |
-| 函数别名重复 | 报错："Alias already defined" |
+| Undefined function call | Error: "Undefined function" |
+| Argument count mismatch | Error: "Argument count mismatch" |
+| Argument type mismatch | Warning and attempt implicit conversion |
+| Recursive function call | Supported (no special restrictions) |
+| Duplicate function alias | Error: "Alias already defined" |
 
-### 5.3 类型转换
+### 5.3 Type Conversion
 
-| 情况 | 处理方式 |
+| Case | Handling |
 |------|----------|
-| int → float/double | 隐式转换，无警告 |
-| float/double → int | 截断小数部分，警告 |
-| string → int | 解析失败返回0，警告 |
-| int → string | 始终成功 |
-| 非法类型转换 | 报错："Invalid type conversion" |
+| int → float/double | Implicit conversion, no warning |
+| float/double → int | Truncate decimal, warning |
+| string → int | Return 0 on parse failure, warning |
+| int → string | Always succeeds |
+| Invalid type conversion | Error: "Invalid type conversion" |
 
-### 5.4 内存管理
+### 5.4 Memory Management
 
-| 情况 | 处理方式 |
+| Case | Handling |
 |------|----------|
-| 重复释放 | 报错："Double free detected" |
-| 使用已释放内存 | 警告："Use after free" |
-| 空指针解引用 | 运行时错误（无法在编译时检测） |
-| 内存泄漏 | 不检测（需要外部工具） |
+| Double free | Error: "Double free detected" |
+| Use after free | Warning: "Use after free" |
+| Null pointer dereference | Runtime error (cannot detect at compile time) |
+| Memory leak | Not detected (requires external tools) |
 
-### 5.5 控制流
+### 5.5 Control Flow
 
-| 情况 | 处理方式 |
+| Case | Handling |
 |------|----------|
-| 无限循环 | 不检测（运行时问题） |
-| 死代码（return后语句） | 警告："Unreachable code" |
-| 条件表达式非布尔类型 | 警告并转换为布尔值 |
-| switch语句中无break | 正常行为（case穿透） |
-| switch语句中default位置任意 | 支持（default可以在任何位置） |
-| switch语句中case重复 | 报错："Duplicate case" |
+| Infinite loop | Not detected (runtime issue) |
+| Unreachable code (after return) | Warning: "Unreachable code" |
+| Non-boolean condition expression | Warning and convert to boolean |
+| switch without break | Normal behavior (fall-through) |
+| default anywhere in switch | Supported (can be in any position) |
+| Duplicate case in switch | Error: "Duplicate case" |
 
-### 5.6 字符串处理
+### 5.6 String Handling
 
-| 情况 | 处理方式 |
+| Case | Handling |
 |------|----------|
-| 空字符串 | 正常处理 |
-| 超长字符串 | 警告："String too long" |
-| 字符串溢出 | 运行时错误（依赖C库） |
-| 未闭合字符串 | 报错："Unterminated string" |
+| Empty string | Normal handling |
+| Very long string | Warning: "String too long" |
+| String overflow | Runtime error (depends on C library) |
+| Unterminated string | Error: "Unterminated string" |
 
 ### 5.7 File I/O
 
-| 情况 | 处理方式 |
+| Case | Handling |
 |------|----------|
-| 文件不存在 | 运行时错误 |
-| 权限不足 | 运行时错误 |
-| 路径格式错误 | 警告："Invalid path format" |
-| 超大文件读取 | 内存不足时运行时错误 |
+| File not found | Runtime error |
+| Permission denied | Runtime error |
+| Invalid path format | Warning: "Invalid path format" |
+| Reading very large file | Runtime error on out-of-memory |
 
-### 5.8 导入机制
+### 5.8 Import Mechanism
 
-| 情况 | 处理方式 |
+| Case | Handling |
 |------|----------|
-| 循环导入 | 报错："Circular import detected" |
-| 不存在的文件 | 报错："Cannot open imported file" |
-| 重复导入 | 忽略后续导入 |
-| 导入文件语法错误 | 报错并终止编译 |
+| Circular import | Error: "Circular import detected" |
+| Non-existent file | Error: "Cannot open imported file" |
+| Duplicate import | Ignore subsequent imports |
+| Syntax error in imported file | Error and terminate compilation |
 
 ---
 
-## 6. 平台兼容性
+## 6. Platform Compatibility
 
-| 平台 | C代码生成 | NASM汇编生成 | 状态 |
-|------|----------|-------------|------|
-| Windows | ✅ | ✅ (COFF格式) | 测试通过 |
-| Linux | ✅ | ✅ (ELF格式) | 基本支持 |
-| macOS | ✅ | ⏳ | 未测试 |
+| Platform | C Code Generation | NASM Assembly Generation | Status |
+|----------|-------------------|--------------------------|--------|
+| Windows | ✅ | ✅ (COFF format) | Tested |
+| Linux | ✅ | ✅ (ELF format) | Basic support |
+| macOS | ✅ | ⏳ | Untested |
 
 ---
 
-## 7. VSCode插件
+## 7. VSCode Extension
 
-插件位于 `elhle/` 目录，提供以下功能：
+Extension located in `elhle/` directory, providing the following features:
 
-### 7.1 功能特性
+### 7.1 Features
 
-| 功能 | 描述 |
-|------|------|
-| **语法高亮** | 支持E语言关键字、类型、函数、字符串等 |
-| **自动补全** | 支持内置类型、函数、关键字的自动补全 |
-| **实时错误检查** | 通过集成编译器进行语法错误检查 |
-| **代码格式化** | 支持基本的代码格式化 |
-| **括号匹配** | 自动匹配括号、花括号、方括号 |
-| **注释支持** | 支持单行和多行注释 |
+| Feature | Description |
+|---------|-------------|
+| **Syntax Highlighting** | Supports E language keywords, types, functions, strings, etc. |
+| **Auto Completion** | Supports auto-completion for built-in types, functions, keywords |
+| **Real-time Error Checking** | Syntax error checking via integrated compiler |
+| **Code Formatting** | Basic code formatting support |
+| **Bracket Matching** | Auto-match parentheses, braces, brackets |
+| **Comment Support** | Single-line and multi-line comments |
 
-### 7.2 安装方法
+### 7.2 Installation
 
 ```bash
 cd elhle
@@ -1202,18 +1202,18 @@ npm install
 npm run compile
 ```
 
-### 7.3 打包发布
+### 7.3 Packaging
 
 ```bash
 npm install -g vsce
 vsce package
 ```
 
-生成的 `.vsix` 文件可以在 VSCode 中通过"从 VSIX 安装"安装。
+The generated `.vsix` file can be installed in VSCode via "Install from VSIX".
 
 ---
 
-## 8. 示例程序
+## 8. Example Programs
 
 ### 8.1 Hello World
 
@@ -1223,7 +1223,7 @@ func main() {
 }
 ```
 
-### 8.2 斐波那契数列
+### 8.2 Fibonacci Sequence
 
 ```e
 func fibonacci(int n) {
@@ -1239,7 +1239,7 @@ func main() {
 }
 ```
 
-### 8.3 内存管理示例
+### 8.3 Memory Management Example
 
 ```e
 func main() {
@@ -1252,11 +1252,11 @@ func main() {
 }
 ```
 
-### 8.4 内联汇编示例
+### 8.4 Inline Assembly Example
 
 ```e
 func main() {
-    // 使用汇编计算 2^8
+    // Calculate 2^8 using assembly
     int power = asm(''
         mov rax, 2;
         mov rcx, 8;
@@ -1264,7 +1264,7 @@ func main() {
     '');
     eout >namespace std "2^8 = " & string(power) & endl;
     
-    // 使用虚拟寄存器
+    // Use virtual registers
     asm(''
         mov xl, "Assembly";
         mov xh, 123;
@@ -1275,64 +1275,64 @@ func main() {
 
 ---
 
-## 9. 常见问题
+## 9. FAQ
 
-### Q: 为什么生成的程序返回错误结果？
-A: 检查变量声明顺序、栈空间分配、返回值处理。使用 `--nasm` 参数查看汇编代码。
+### Q: Why does my program return wrong results?
+A: Check variable declaration order, stack allocation, return value handling. Use `--nasm` flag to inspect assembly code.
 
-### Q: 为什么NASM编译失败？
-A: 确保安装了NASM编译器，并检查生成的汇编代码语法。
+### Q: Why does NASM compilation fail?
+A: Ensure NASM compiler is installed, check generated assembly syntax.
 
-### Q: 为什么导入文件时出错？
-A: 检查文件路径是否正确，确保被导入文件语法正确。
+### Q: Why do I get errors when importing files?
+A: Check file path is correct, ensure imported file has valid syntax.
 
-### Q: 为什么字符串拼接出错？
-A: 确保使用 `&` 操作符，检查字符串是否正确闭合。
+### Q: Why does string concatenation fail?
+A: Ensure using `&` operator, check strings are properly terminated.
 
-### Q: 如何调试汇编代码？
-A: 使用 `--nasm` 参数生成汇编代码，检查 `output.asm` 文件。
+### Q: How to debug assembly code?
+A: Use `--nasm` flag to generate assembly, inspect `output.asm` file.
 
-### Q: 如何使用内联汇编？
-A: 使用 `asm(''汇编代码'')` 语法，支持虚拟寄存器 `xl` 和 `xh`。
+### Q: How to use inline assembly?
+A: Use `asm(''assembly code'')` syntax, supports virtual registers `xl` and `xh`.
 
 ---
 
-## 10. 特性实现状态
+## 10. Feature Implementation Status
 
-### ✅ 已实现
-- 词法分析和语法分析
-- 变量声明和赋值（int, float, double, string, char, dir）
-- 函数定义和调用（支持返回类型和别名）
-- 控制流（for, while, if-else, switch-case, break）
-- 输入输出（eout, ein）
-- 类型转换（string, int, char, dir）
-- 字符串拼接和插值
-- 错误恢复机制（报告多个错误）
-- 符号表（变量/函数作用域和类型跟踪）
-- 内存管理（AST节点释放）
-- 指针功能（mem, po类型）
-- 内存分配与释放（alloc, free）
-- 内存安全检查（所有权跟踪、重复释放检测）
-- 源文件导入（import）
-- {{}} 插值语法
-- 文件I/O（通过dir类型路径）
-- 结构体和枚举
-- **对象**（单例对象，支持成员变量和默认值）
-- NASM汇编代码生成（x86-64）
-- 内联汇编（asm函数）
-- VSCode插件（语法高亮、自动补全、错误检查、格式化）
-- **一级宏系统**（#define, #undef, #push/#pop, #ifdef/#else/#endif, #x字符串化, a##b拼接）
-- **二级宏系统**（##$ 前缀，支持 syntax/function/operator/typedef/keyword 五种类型）
-- **中间表示（IR）**（跨平台中间代码，类汇编语法）
-- **机器码生成**（直接生成x86-64 Windows可执行文件，不需要外部工具）
+### ✅ Implemented
+- Lexical and syntax analysis
+- Variable declaration and assignment (int, float, double, string, char, dir)
+- Function definition and call (with return types and aliases)
+- Control flow (for, while, if-else, switch-case, break)
+- Input/output (eout, ein)
+- Type conversion (string, int, char, dir)
+- String concatenation and interpolation
+- Error recovery mechanism (report multiple errors)
+- Symbol table (variable/function scope and type tracking)
+- Memory management (AST node deallocation)
+- Pointer functionality (mem, po types)
+- Memory allocation and deallocation (alloc, free)
+- Memory safety checks (ownership tracking, double-free detection)
+- Source file import (import)
+- {{}} interpolation syntax
+- File I/O (via dir type paths)
+- Structs and enums
+- **Objects** (singleton objects with member variables and default values)
+- NASM assembly code generation (x86-64)
+- Inline assembly (asm function)
+- VSCode extension (syntax highlighting, auto-completion, error checking, formatting)
+- **Level 1 macro system** (#define, #undef, #push/#pop, #ifdef/#else/#endif, #x stringification, a##b concatenation)
+- **Level 2 macro system** (##$ prefix, supports syntax/function/operator/typedef/keyword types)
+- **Intermediate Representation (IR)** (cross-platform intermediate code, assembly-like syntax)
+- **Machine code generation** (direct x86-64 Windows executable generation, no external tools needed)
 
-### ⏳ 部分实现
-- 字符串拼接的解析（某些情况下可能出错）
-- 二级宏的 exec 块（AST转换未完全实现）
-- 机器码生成器（目前仅支持简单程序，需要扩展IR支持）
+### ⏳ Partially Implemented
+- String concatenation parsing (may fail in some cases)
+- Level 2 macro exec blocks (AST transformation not fully implemented)
+- Machine code generator (currently supports simple programs, needs IR extension)
 
-### ❌ 未实现
-- 更复杂的类型系统
-- 类和对象
-- 异常处理
-- 多线程支持
+### ❌ Not Implemented
+- More complex type system
+- Classes and objects
+- Exception handling
+- Multi-threading support
