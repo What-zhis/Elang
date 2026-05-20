@@ -1,3 +1,5 @@
+[![CN](https://img.shields.io/badge/语言-中文-blue)](./README_CN.md)
+
 # E Language Compiler
 
 An E language compiler implemented in C, supporting variable declarations, function definitions, control flow, input/output, type conversion, structs, enums, objects, pointers, memory management, source file imports, inline assembly, and a powerful two-level macro system. The compiler can generate C code or NASM assembly code.
