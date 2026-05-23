@@ -9,5 +9,4 @@
 *.log
 *.src
 output.*
-/elhle/*
 /bin/*

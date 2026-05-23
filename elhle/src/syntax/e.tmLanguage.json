@@ -1,0 +1,80 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "E Language",
+    "scopeName": "source.e",
+    "fileTypes": ["e"],
+    "patterns": [
+        {
+            "name": "comment.line.double-slash.e",
+            "match": "//.*$"
+        },
+        {
+            "name": "comment.block.e",
+            "begin": "/\\*",
+            "end": "\\*/"
+        },
+        {
+            "name": "string.quoted.double.e",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.e",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        {
+            "name": "string.quoted.single.e",
+            "begin": "'",
+            "end": "'",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.e",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        {
+            "name": "keyword.control.e",
+            "match": "\\b(func|return|if|else|else if|for|while|switch|case|default|break|continue|import|export|as|from|typedef|enum|struct|object|new|delete|true|false|null|void|this|super)\\b"
+        },
+        {
+            "name": "storage.type.e",
+            "match": "\\b(int|float|double|string|char|bool|void|dir|mem|po)\\b"
+        },
+        {
+            "name": "constant.numeric.e",
+            "match": "\\b(0x[0-9a-fA-F]+|0b[01]+|\\d+\\.?\\d*)\\b"
+        },
+        {
+            "name": "support.function.e",
+            "match": "\\b(print|println|eout|ein|string|int|float|char|dir|alloc|free|sizeof|typeof|strlen|strcat|strcpy|strcmp)\\b"
+        },
+        {
+            "name": "variable.language.e",
+            "match": "\\b(endl|std|self)\\b"
+        },
+        {
+            "name": "punctuation.operator.e",
+            "match": "[+\\-*/%=<>!&|^~?:]"
+        },
+        {
+            "name": "punctuation.separator.e",
+            "match": "[,;:.]"
+        },
+        {
+            "name": "punctuation.bracket.e",
+            "match": "[()\\[\\]{}]"
+        },
+        {
+            "name": "meta.macro.e",
+            "match": "#\\w+"
+        },
+        {
+            "name": "meta.macro.level2.e",
+            "match": "##\\$\\w+"
+        }
+    ],
+    "repository": {}
+}

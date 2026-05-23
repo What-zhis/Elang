@@ -1,0 +1,71 @@
+{
+    "name": "elhle",
+    "displayName": "E Language Support",
+    "description": "Full support for E language - syntax highlighting, auto-completion, and error checking",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Linters",
+        "Formatters"
+    ],
+    "activationEvents": [
+        "onLanguage:e"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "e",
+                "aliases": ["E", "e"],
+                "extensions": [".e"],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "e",
+                "scopeName": "source.e",
+                "path": "./src/syntax/e.tmLanguage.json"
+            }
+        ],
+        "configuration": {
+            "title": "E Language",
+            "properties": {
+                "elhle.compilerPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to the E language compiler executable (ecc.exe or ecc)"
+                },
+                "elhle.compilerArgs": {
+                    "type": "array",
+                    "default": ["--debug"],
+                    "description": "Arguments to pass to the E compiler for error checking"
+                },
+                "elhle.enableLinting": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable error checking using the E compiler"
+                },
+                "elhle.enableAutoComplete": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable auto-completion"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "compile": "tsc -p .",
+        "watch": "tsc -watch -p .",
+        "package": "vsce package"
+    },
+    "devDependencies": {
+        "@types/node": "^20.4.0",
+        "@types/vscode": "^1.80.0",
+        "typescript": "^5.1.6",
+        "vsce": "^2.15.0"
+    }
+}

@@ -1,0 +1,366 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "E",
+    "scopeName": "source.e",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#macros"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#types"
+        },
+        {
+            "include": "#functions"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#operators"
+        },
+        {
+            "include": "#identifiers"
+        },
+        {
+            "include": "#asm"
+        },
+        {
+            "include": "#structs"
+        },
+        {
+            "include": "#enums"
+        }
+    ],
+    "repository": {
+        "macros": {
+            "patterns": [
+                {
+                    "name": "meta.macro.define.e",
+                    "begin": "^\\s*(#define)\\s+",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.control.macro.e"
+                        }
+                    },
+                    "end": "$",
+                    "patterns": [
+                        {
+                            "name": "entity.name.function.macro.e",
+                            "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+                        },
+                        {
+                            "name": "entity.name.constant.macro.e",
+                            "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b"
+                        },
+                        {
+                            "name": "keyword.operator.stringize.macro.e",
+                            "match": "#[a-zA-Z_][a-zA-Z0-9_]*"
+                        },
+                        {
+                            "name": "keyword.operator.concat.macro.e",
+                            "match": "[a-zA-Z_][a-zA-Z0-9_]*##[a-zA-Z_][a-zA-Z0-9_]*"
+                        },
+                        {
+                            "include": "#strings"
+                        },
+                        {
+                            "include": "#numbers"
+                        },
+                        {
+                            "include": "#comments"
+                        }
+                    ]
+                },
+                {
+                    "name": "keyword.control.macro.e",
+                    "match": "^\\s*(#undef|#push|#pop|#ifdef|#ifndef|#else|#endif|#if)\\b"
+                },
+                {
+                    "name": "meta.macro.level2.e",
+                    "begin": "^\\s*(##\\$)\\s*",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.control.macro.level2.e"
+                        }
+                    },
+                    "end": "(?=^\\s*[^\\s#])",
+                    "patterns": [
+                        {
+                            "name": "entity.name.macro.level2.e",
+                            "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*|\\*\\*|\\*|\\+|\\-|\\/|%)\\b"
+                        },
+                        {
+                            "name": "storage.type.macro.level2.e",
+                            "match": "(keyword|function|operator|syntax|typedef)"
+                        },
+                        {
+                            "name": "support.constant.property.macro.e",
+                            "match": "(pattern|fields|param|precedence|associativity|exec)"
+                        },
+                        {
+                            "name": "punctuation.separator.e",
+                            "match": "[:;,]"
+                        },
+                        {
+                            "name": "punctuation.definition.array.e",
+                            "match": "[\\[\\]]"
+                        },
+                        {
+                            "name": "meta.exec.block.macro.e",
+                            "begin": "exec\\s*:\\s*\\{",
+                            "beginCaptures": {
+                                "0": {
+                                    "name": "keyword.control.exec.macro.e"
+                                }
+                            },
+                            "end": "\\}",
+                            "patterns": [
+                                {
+                                    "include": "#comments"
+                                },
+                                {
+                                    "include": "#strings"
+                                },
+                                {
+                                    "name": "support.function.ast.macro.e",
+                                    "match": "\\b(ast_create_if|ast_create_call|ast_create_struct|ast_create_not|ast_create_range_loop)\\b"
+                                }
+                            ]
+                        },
+                        {
+                            "include": "#strings"
+                        },
+                        {
+                            "include": "#comments"
+                        }
+                    ]
+                }
+            ]
+        },
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.e",
+                    "match": "//.*$"
+                },
+                {
+                    "name": "comment.block.e",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                },
+                {
+                    "name": "comment.block.multiline.e",
+                    "begin": "/\\[",
+                    "end": "\\]/"
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.e",
+                    "match": "\\b(func|if|else|for|while|return|import|namespace|eout|ein|mem|po|alloc|free|run|asm|struct|enum|break|continue|switch|case|default)\\b"
+                }
+            ]
+        },
+        "types": {
+            "patterns": [
+                {
+                    "name": "storage.type.e",
+                    "match": "\\b(int|string|char|float|double|dir|mem|po|bool)\\b"
+                }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "name": "entity.name.function.e",
+                    "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+                },
+                {
+                    "name": "support.function.builtin.e",
+                    "match": "\\b(string|int|char|dir|printf|scanf)\\s*(?=\\()"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.e",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.e",
+                            "match": "\\."
+                        },
+                        {
+                            "name": "variable.interpolation.e",
+                            "begin": "\\{\\{",
+                            "end": "\\}\\}",
+                            "patterns": [
+                                {
+                                    "include": "$self"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.e",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.e",
+                            "match": "\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double-single.e",
+                    "begin": "''",
+                    "end": "''",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.e",
+                            "match": "\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.path.windows.e",
+                    "match": "\\b([A-Za-z]:[\\\\/][^\\s;+\\-*/=<>!&|]+)\\b"
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.integer.e",
+                    "match": "\\b\\d+\\b"
+                },
+                {
+                    "name": "constant.numeric.float.e",
+                    "match": "\\b\\d+\\.\\d+\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.arithmetic.e",
+                    "match": "(\\+|\\-|\\*|\\/|%)"
+                },
+                {
+                    "name": "keyword.operator.comparison.e",
+                    "match": "(==|!=|<|<=|>|>=)"
+                },
+                {
+                    "name": "keyword.operator.assignment.e",
+                    "match": "(=|=>)"
+                },
+                {
+                    "name": "keyword.operator.logical.e",
+                    "match": "(&&|\\|\\||!)"
+                },
+                {
+                    "name": "keyword.operator.bitwise.e",
+                    "match": "(&|\\||\\^|~|<<|>>)"
+                },
+                {
+                    "name": "keyword.operator.string.e",
+                    "match": "(&)"
+                },
+                {
+                    "name": "keyword.operator.member.e",
+                    "match": "(\\.)"
+                },
+                {
+                    "name": "keyword.operator.arrow.e",
+                    "match": "(->|=>)"
+                }
+            ]
+        },
+        "identifiers": {
+            "patterns": [
+                {
+                    "name": "variable.other.e",
+                    "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+                },
+                {
+                    "name": "variable.language.e",
+                    "match": "\\b(endl|std|xl|xh|true|false|null)\\b"
+                }
+            ]
+        },
+        "asm": {
+            "patterns": [
+                {
+                    "name": "keyword.control.asm.e",
+                    "match": "\\b(asm)\\b"
+                },
+                {
+                    "name": "string.quoted.asm.e",
+                    "begin": "''",
+                    "end": "''",
+                    "patterns": [
+                        {
+                            "name": "comment.line.asm.e",
+                            "match": ";.*$"
+                        },
+                        {
+                            "name": "keyword.instruction.asm.e",
+                            "match": "\\b(mov|add|sub|mul|div|push|pop|call|ret|cmp|je|jne|jmp|lea|and|or|xor|not)\\b"
+                        },
+                        {
+                            "name": "support.register.asm.e",
+                            "match": "\\b(rax|rbx|rcx|rdx|rsi|rdi|rbp|rsp|al|ah|bl|bh|cl|ch|dl|dh|xl|xh)\\b"
+                        },
+                        {
+                            "name": "variable.parameter.asm.e",
+                            "match": "_[a-z][a-z]?"
+                        }
+                    ]
+                }
+            ]
+        },
+        "structs": {
+            "patterns": [
+                {
+                    "name": "keyword.control.struct.e",
+                    "match": "\\b(struct)\\b"
+                },
+                {
+                    "name": "entity.name.type.struct.e",
+                    "match": "\\b([A-Z][a-zA-Z0-9_]*)\\b(?=\\s*\\{)"
+                }
+            ]
+        },
+        "enums": {
+            "patterns": [
+                {
+                    "name": "keyword.control.enum.e",
+                    "match": "\\b(enum)\\b"
+                },
+                {
+                    "name": "entity.name.type.enum.e",
+                    "match": "\\b([A-Z][a-zA-Z0-9_]*)\\b(?=\\s*\\{)"
+                },
+                {
+                    "name": "constant.enum.member.e",
+                    "match": "\\b([A-Z_][A-Z0-9_]*)\\b"
+                }
+            ]
+        }
+    }
+}
