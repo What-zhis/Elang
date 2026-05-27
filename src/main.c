@@ -7,14 +7,14 @@
 #include "codegen_nasm.h"
 #include "preprocessor.h"
 #include "codegen_ir.h"
+#include "optimizer.h"
+#include "errors.h"
 
 extern FILE *output;
 extern void generateCode(ASTNode *node);
-extern int errorCount;
 extern void freeAST(ASTNode *node);
 extern SymbolTable *currentSymbolTable;
 extern void freeSymbolTable(SymbolTable *table);
-extern void addImport(char *filename);
 extern void initASTPool();
 extern void cleanupASTPool();
 extern void printASTPoolStats();
@@ -36,10 +36,16 @@ char *readFile(const char *filename) {
     
     int writePos = 0;
     for (int i = 0; content[i] != '\0'; i++) {
-        if (content[i] == '\r' && content[i+1] == '\n') {
-            continue;
+        if (content[i] == '\r') {
+            if (content[i+1] == '\n') {
+                content[writePos++] = '\n';
+                i++;
+            } else {
+                content[writePos++] = '\n';
+            }
+        } else {
+            content[writePos++] = content[i];
         }
-        content[writePos++] = content[i];
     }
     content[writePos] = '\0';
     
@@ -127,7 +133,7 @@ char *processImports(const char *mainFile) {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s [--run|--compile|--debug|--c|--ir|--machine|--pool-stats] [--arm] [--linux|--win|--windows|--android] <input_file>\n", argv[0]);
+        fprintf(stderr, "%sUsage: %s [--run|--compile|--debug|--c|--ir|--machine|--pool-stats] [--arm] [--linux|--win|--windows|--android] [--opt|-O <level>] [--no-color] <input_file>%s\n", COLOR_CYAN, argv[0], COLOR_RESET);
         fprintf(stderr, "  --run: Compile and run, then delete temporary files (default)\n");
         fprintf(stderr, "  --compile: Compile file but don't run\n");
         fprintf(stderr, "  --debug: Only check for errors, don't run\n");
@@ -140,6 +146,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "  --win: Generate code for Windows (x86_64 only)\n");
         fprintf(stderr, "  --windows: Same as --win\n");
         fprintf(stderr, "  --android: Generate code for Android (ARM only)\n");
+        fprintf(stderr, "  --opt|-O <level>: Optimization level (0=none, 1=basic, 2=full)\n");
+        fprintf(stderr, "  --no-color: Disable color output\n");
         return 1;
     }
 
@@ -151,6 +159,7 @@ int main(int argc, char *argv[]) {
     TargetPlatform target = TARGET_WIN;  // Default: Windows x86_64
     int isARM = 0;
     char *inputFile = NULL;
+    optLevel = OPT_LEVEL_BASIC;  // Default optimization level
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--run") == 0) {
@@ -197,6 +206,22 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             target = TARGET_ARM_ANDROID;
+        } else if (strcmp(argv[i], "--opt") == 0 || strcmp(argv[i], "-O") == 0) {
+            if (i + 1 < argc) {
+                int level = atoi(argv[i+1]);
+                if (level >= 0 && level <= 2) {
+                    optLevel = level;
+                } else {
+                    fprintf(stderr, "%sWarning: Invalid optimization level %d, using default (1)%s\n", 
+                            COLOR_YELLOW, level, COLOR_RESET);
+                }
+                i++;
+            } else {
+                fprintf(stderr, "%sWarning: Missing optimization level, using default (1)%s\n", 
+                        COLOR_YELLOW, COLOR_RESET);
+            }
+        } else if (strcmp(argv[i], "--no-color") == 0) {
+            useColorOutput = 0;
         } else {
             inputFile = argv[i];
         }
@@ -231,7 +256,7 @@ int main(int argc, char *argv[]) {
 
     FILE *tempFile = fopen("_temp_processed.e", "wb");
     if (!tempFile) {
-        fprintf(stderr, "Error: Could not create temp file\n");
+        reportError(ERR_CODE_MEMORY_ERROR, inputFile, 0, 0, "Could not create temp file");
         return 1;
     }
     fwrite(preprocessedContent, 1, strlen(preprocessedContent), tempFile);
@@ -239,7 +264,7 @@ int main(int argc, char *argv[]) {
 
     input = fopen("_temp_processed.e", "rb");
     if (!input) {
-        fprintf(stderr, "Error: Could not open processed file\n");
+        reportError(ERR_CODE_MEMORY_ERROR, inputFile, 0, 0, "Could not open processed file");
         return 1;
     }
 
@@ -248,7 +273,8 @@ int main(int argc, char *argv[]) {
     currentToken = getNextToken();
     ASTNode *program = parseProgram();
     if (!program || errorCount > 0) {
-        fprintf(stderr, "Error: Failed to parse program. Found %d error(s).\n", errorCount);
+        fprintf(stderr, "%sError: Failed to parse program. Found %d error(s).%s\n", 
+                COLOR_RED, errorCount, COLOR_RESET);
         fclose(input);
         remove("_temp_processed.e");
         free(programContent);
@@ -258,6 +284,12 @@ int main(int argc, char *argv[]) {
         free(imports);
         cleanupASTPool();
         return 1;
+    }
+
+    // Optimize AST
+    if (optLevel > OPT_LEVEL_NONE && !debugOnly) {
+        fprintf(stderr, "%sOptimizing AST (level %d)...%s\n", COLOR_BLUE, optLevel, COLOR_RESET);
+        program = optimizeAST(program);
     }
 
     if (debugOnly) {

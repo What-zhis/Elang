@@ -10,6 +10,13 @@ static int isIdChar(int c) {
     return isalnum(c) || c == '_';
 }
 
+static void safeStrCat(char *dest, const char *src, int *destSize, int maxSize) {
+    while (*src && *destSize < maxSize - 1) {
+        dest[(*destSize)++] = *src++;
+    }
+    dest[*destSize] = '\0';
+}
+
 static void skipWhitespace(const char **p) {
     while (**p == ' ' || **p == '\t' || **p == '\r') (*p)++;
 }
@@ -410,8 +417,7 @@ static char *expandFunctionMacro(Preprocessor *pp, Macro *m, const char **p) {
                 if (strcmp(idBuf, m->params[j].name) == 0) {
                     int argLen = strlen(argValues[j]);
                     if (resultSize + argLen < MAX_MACRO_BODY * 2 - 1) {
-                        strcpy(result + resultSize, argValues[j]);
-                        resultSize += argLen;
+                        safeStrCat(result, argValues[j], &resultSize, MAX_MACRO_BODY * 4);
                     }
                     matched = 1;
                     break;
@@ -441,8 +447,7 @@ static char *expandFunctionMacro(Preprocessor *pp, Macro *m, const char **p) {
                     char *str = stringify(pp, argValues[j]);
                     int strLen = strlen(str);
                     if (resultSize + strLen < MAX_MACRO_BODY * 2 - 1) {
-                        strcpy(result + resultSize, str);
-                        resultSize += strLen;
+                        safeStrCat(result, str, &resultSize, MAX_MACRO_BODY * 4);
                     }
                     found = 1;
                     break;
@@ -490,11 +495,16 @@ char *expandMacros(Preprocessor *pp, const char *input) {
         if (*p == '"' && !inString) {
             inString = 1;
             result[resultSize++] = *p++;
-            while (*p && (*p != '"' || (*(p-1) == '\\')) && resultSize < MAX_MACRO_BODY * 4 - 1) {
-                result[resultSize++] = *p++;
-            }
-            if (*p == '"') {
-                result[resultSize++] = *p++;
+            while (*p && resultSize < MAX_MACRO_BODY * 4 - 1) {
+                if (*p == '\\') {
+                    result[resultSize++] = *p++;
+                    if (*p) result[resultSize++] = *p++;
+                } else if (*p == '"') {
+                    result[resultSize++] = *p++;
+                    break;
+                } else {
+                    result[resultSize++] = *p++;
+                }
             }
             inString = 0;
             continue;
@@ -519,15 +529,15 @@ char *expandMacros(Preprocessor *pp, const char *input) {
         if (*p == '\'' && *(p+1) == '\'' && !inString) {
             result[resultSize++] = *p++;
             result[resultSize++] = *p++;
-            while (*p && !(*p == '\'' && *(p+1) == '\'')) {
+            while (*p && *(p+1) && !(p[0] == '\'' && p[1] == '\'') && resultSize < MAX_MACRO_BODY * 4 - 1) {
                 if (*p == '\\') {
                     result[resultSize++] = *p++;
-                }
-                if (*p) {
+                    if (*p) result[resultSize++] = *p++;
+                } else {
                     result[resultSize++] = *p++;
                 }
             }
-            if (*p == '\'' && *(p+1) == '\'') {
+            if (*p && *(p+1) && p[0] == '\'' && p[1] == '\'') {
                 result[resultSize++] = *p++;
                 result[resultSize++] = *p++;
             }
@@ -549,8 +559,7 @@ char *expandMacros(Preprocessor *pp, const char *input) {
                     int expLen = strlen(expanded);
                     if (expLen > 0) {
                         if (resultSize + expLen < MAX_MACRO_BODY * 4 - 1) {
-                            strcpy(result + resultSize, expanded);
-                            resultSize += expLen;
+                            safeStrCat(result, expanded, &resultSize, MAX_MACRO_BODY * 4);
                         }
                         p = funcStart;
                         currentIdLen = 0;
@@ -580,15 +589,13 @@ char *expandMacros(Preprocessor *pp, const char *input) {
                         char *expanded = expandFunctionMacro(pp, m, &funcStart);
                         int expLen = strlen(expanded);
                         if (resultSize + expLen < MAX_MACRO_BODY * 4 - 1) {
-                            strcpy(result + resultSize, expanded);
-                            resultSize += expLen;
+                            safeStrCat(result, expanded, &resultSize, MAX_MACRO_BODY * 4);
                         }
                         p = funcStart;
                     } else {
                         int bodyLen = strlen(m->body);
                         if (resultSize + bodyLen < MAX_MACRO_BODY * 4 - 1) {
-                            strcpy(result + resultSize, m->body);
-                            resultSize += bodyLen;
+                            safeStrCat(result, m->body, &resultSize, MAX_MACRO_BODY * 4);
                         }
                     }
                     currentIdLen = 0;
@@ -620,8 +627,7 @@ char *expandMacros(Preprocessor *pp, const char *input) {
                 if (m && m->isActive) {
                     int bodyLen = strlen(m->body);
                     if (resultSize + bodyLen < MAX_MACRO_BODY * 4 - 1) {
-                        strcpy(result + resultSize, m->body);
-                        resultSize += bodyLen;
+                        safeStrCat(result, m->body, &resultSize, MAX_MACRO_BODY * 4);
                     }
                 } else {
                     int k;
@@ -642,8 +648,7 @@ char *expandMacros(Preprocessor *pp, const char *input) {
         if (m && m->isActive) {
             int bodyLen = strlen(m->body);
             if (resultSize + bodyLen < MAX_MACRO_BODY * 4 - 1) {
-                strcpy(result + resultSize, m->body);
-                resultSize += bodyLen;
+                safeStrCat(result, m->body, &resultSize, MAX_MACRO_BODY * 4);
             }
         } else {
             int k;
@@ -807,8 +812,7 @@ static char *expandSecondaryMacro(Preprocessor *pp, SecondaryMacro *sm, const ch
                     }
                     int argLen = strlen(argValue);
                     if (resultSize + argLen < MAX_MACRO_BODY * 2 - 1) {
-                        strcpy(result + resultSize, argValue);
-                        resultSize += argLen;
+                        safeStrCat(result, argValue, &resultSize, MAX_MACRO_BODY * 4);
                     }
                     matched = 1;
                     break;

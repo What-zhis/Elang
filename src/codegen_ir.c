@@ -41,7 +41,8 @@ typedef enum {
     ENCODING_REG_IMM64,
     ENCODING_REG_REG,
     ENCODING_RSP_IMM8,
-    ENCODING_CALL_REL
+    ENCODING_CALL_REL,
+    ENCODING_REG_IMPLICIT
 } InstrEncoding;
 
 typedef struct {
@@ -60,14 +61,29 @@ InstrDef instruction_database[] = {
     DEFINE_INSTR(mov_imm32,  ENCODING_REG_IMM32, 0xB8, 0x00, 0x00),
     DEFINE_INSTR(mov_imm64,  ENCODING_REG_IMM64, 0xB8, 0x48, 0x00),
     DEFINE_INSTR(mov_reg,    ENCODING_REG_REG, 0x89, 0x00, 0x00),
-    DEFINE_INSTR(mov_reg64,  ENCODING_REG_REG, 0x8B, 0x48, 0x00),
-    DEFINE_INSTR(mov_reg_r8, ENCODING_REG_REG, 0x8B, 0x4C, 0x00),
-    DEFINE_INSTR(mov_reg_rr, ENCODING_REG_REG, 0x8B, 0x4D, 0x00),
+    DEFINE_INSTR(mov_reg64,  ENCODING_REG_REG, 0x89, 0x48, 0x00),
     DEFINE_INSTR(xor_reg,    ENCODING_REG_REG, 0x31, 0x00, 0x00),
     DEFINE_INSTR(xor_reg64,  ENCODING_REG_REG, 0x31, 0x48, 0x00),
     DEFINE_INSTR(add_rsp,    ENCODING_RSP_IMM8, 0x83, 0x48, 0xC4),
     DEFINE_INSTR(sub_rsp,    ENCODING_RSP_IMM8, 0x83, 0x48, 0xEC),
-    DEFINE_INSTR(call_rel,   ENCODING_CALL_REL, 0xFF, 0x00, 0x15),
+    DEFINE_INSTR(call_rel,   ENCODING_CALL_REL, 0xE8, 0x00, 0x00),
+    DEFINE_INSTR(push,       ENCODING_REG_IMPLICIT, 0x50, 0x00, 0x00),
+    DEFINE_INSTR(pop,        ENCODING_REG_IMPLICIT, 0x58, 0x00, 0x00),
+    DEFINE_INSTR(add_reg,    ENCODING_REG_REG, 0x01, 0x00, 0x00),
+    DEFINE_INSTR(add_reg64,  ENCODING_REG_REG, 0x01, 0x48, 0x00),
+    DEFINE_INSTR(sub_reg,    ENCODING_REG_REG, 0x29, 0x00, 0x00),
+    DEFINE_INSTR(sub_reg64,  ENCODING_REG_REG, 0x29, 0x48, 0x00),
+    DEFINE_INSTR(mul_reg,    ENCODING_REG_REG, 0x0F, 0x48, 0xAF),
+    DEFINE_INSTR(div_reg,    ENCODING_REG_REG, 0x0F, 0x48, 0xF7),
+    DEFINE_INSTR(cmp_reg,    ENCODING_REG_REG, 0x39, 0x00, 0x00),
+    DEFINE_INSTR(cmp_reg64,  ENCODING_REG_REG, 0x39, 0x48, 0x00),
+    DEFINE_INSTR(jmp_rel,    ENCODING_CALL_REL, 0xE9, 0x00, 0x00),
+    DEFINE_INSTR(je_rel,     ENCODING_CALL_REL, 0x0F, 0x00, 0x84),
+    DEFINE_INSTR(jne_rel,    ENCODING_CALL_REL, 0x0F, 0x00, 0x85),
+    DEFINE_INSTR(jl_rel,     ENCODING_CALL_REL, 0x0F, 0x00, 0x8C),
+    DEFINE_INSTR(jg_rel,     ENCODING_CALL_REL, 0x0F, 0x00, 0x8F),
+    DEFINE_INSTR(jle_rel,    ENCODING_CALL_REL, 0x0F, 0x00, 0x8E),
+    DEFINE_INSTR(jge_rel,    ENCODING_CALL_REL, 0x0F, 0x00, 0x8D),
     {NULL, 0, 0, 0, 0}
 };
 
@@ -132,8 +148,8 @@ void instr_encode(const char *mnemonic, X64Reg dest, X64Reg src, unsigned long l
 
     unsigned char rex_byte = def->rex;
     
-    if (def->encoding == ENCODING_REG_REG) {
-        if (reg_is_extended(dest)) rex_byte |= 0x04;
+    if (def->encoding == ENCODING_REG_REG || def->encoding == ENCODING_REG_IMPLICIT) {
+        if (reg_is_extended(dest)) rex_byte |= 0x48;
         if (reg_is_extended(src)) rex_byte |= 0x01;
     }
     
@@ -141,23 +157,23 @@ void instr_encode(const char *mnemonic, X64Reg dest, X64Reg src, unsigned long l
         cb_emit_u8(rex_byte);
     }
     
-    cb_emit_u8(def->base);
-    
     switch (def->encoding) {
         case ENCODING_IMPLICIT:
+            cb_emit_u8(def->base);
             break;
             
         case ENCODING_REG_IMM32:
-            cb_emit_u8(0xC0 | dest);
+            cb_emit_u8(def->base | (dest & 0x07));
             cb_emit_u32((unsigned long)imm);
             break;
             
         case ENCODING_REG_IMM64:
-            cb_emit_u8(0xC0 | dest);
+            cb_emit_u8(def->base | (dest & 0x07));
             cb_emit_u64(imm);
             break;
             
         case ENCODING_REG_REG:
+            cb_emit_u8(def->base);
             if (def->ext != 0) {
                 cb_emit_u8(def->ext);
             }
@@ -165,13 +181,19 @@ void instr_encode(const char *mnemonic, X64Reg dest, X64Reg src, unsigned long l
             break;
             
         case ENCODING_RSP_IMM8:
+            cb_emit_u8(def->base);
             cb_emit_u8(def->ext);
             cb_emit_u8((unsigned char)imm);
             break;
             
         case ENCODING_CALL_REL:
+            cb_emit_u8(def->base);
             cb_emit_u8(def->ext);
             cb_emit_u32((unsigned long)imm);
+            break;
+            
+        case ENCODING_REG_IMPLICIT:
+            cb_emit_u8(def->base | (dest & 0x07));
             break;
     }
 }
@@ -596,110 +618,28 @@ void pe_pad_to_alignment(FILE *f, int alignment) {
 }
 
 void generatePEFile() {
+    FILE *minFile = fopen("minimal.exe", "rb");
+    if (!minFile) return;
+    
+    fseek(minFile, 0, SEEK_END);
+    long minSize = ftell(minFile);
+    fseek(minFile, 0, SEEK_SET);
+    
+    unsigned char *peData = malloc(minSize);
+    fread(peData, 1, minSize, minFile);
+    fclose(minFile);
+    
+    memcpy(peData + 0x400, codeBuffer.data, codeBuffer.size);
+    
     FILE *peFile = fopen("output.exe", "wb");
-    if (!peFile) return;
-    
-    DOSHeader dosHeader = {
-        0x5A4D, 0x90, 0x03, 0x00, 0x04, 0x00, 0xFF, 0xFF,
-        0xB8, 0x00, 0x40, 0x00, 0x00, 0x00
-    };
-    fwrite(&dosHeader, sizeof(DOSHeader), 1, peFile);
-    
-    for (int i = sizeof(DOSHeader); i < 64; i++) {
-        pe_write_byte(peFile, 0);
+    if (!peFile) {
+        free(peData);
+        return;
     }
     
-    COFFHeader coffHeader = {
-        0x50450000, 0x8664, 3, 0, 0, 0, 224, 0x103
-    };
-    fwrite(&coffHeader, sizeof(COFFHeader), 1, peFile);
-    
-    PEOptionalHeader64 peOptHeader = {
-        0x20B, 0, 0, 0x200, 0x200, 0, 0x1000, 0x1000,
-        0x140000000ULL, 0x1000, 0x200, 6, 0, 0, 0, 6, 0,
-        0, 0x10000, 0x200, 0, 3, 0x8140, 0x100000ULL,
-        0x1000ULL, 0x100000ULL, 0x1000ULL, 0, 16
-    };
-    fwrite(&peOptHeader, sizeof(PEOptionalHeader64), 1, peFile);
-    
-    for (int i = 0; i < 16; i++) {
-        pe_write_dword(peFile, 0);
-        pe_write_dword(peFile, 0);
-    }
-    
-    PESectionHeader textSection = {
-        {'.', 't', 'e', 'x', 't', 0, 0, 0},
-        0x200, 0x1000, 0x200, 0x200, 0, 0, 0, 0, 0x60000020
-    };
-    fwrite(&textSection, sizeof(PESectionHeader), 1, peFile);
-    
-    PESectionHeader dataSection = {
-        {'.', 'd', 'a', 't', 'a', 0, 0, 0},
-        0x200, 0x2000, 0x200, 0x400, 0, 0, 0, 0, 0xC0000040
-    };
-    fwrite(&dataSection, sizeof(PESectionHeader), 1, peFile);
-    
-    PESectionHeader rdataSection = {
-        {'.', 'r', 'd', 'a', 't', 'a', 0, 0},
-        0x200, 0x3000, 0x200, 0x600, 0, 0, 0, 0, 0x40000040
-    };
-    fwrite(&rdataSection, sizeof(PESectionHeader), 1, peFile);
-    
-    pe_pad_to_alignment(peFile, 0x200);
-    
-    fwrite(codeBuffer.data, 1, codeBuffer.size, peFile);
-    pe_pad_to_alignment(peFile, 0x200);
-    
-    for (int i = 0; i < irStringCount; i++) {
-        fwrite(irStrings[i].value, 1, strlen(irStrings[i].value), peFile);
-        pe_write_byte(peFile, 0);
-    }
-    pe_pad_to_alignment(peFile, 0x200);
-    
-    fseek(peFile, 0x600, SEEK_SET);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0x640);
-    pe_write_dword(peFile, 3);
-    pe_write_dword(peFile, 0x650);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0x660);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0x000001B0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0x66C);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0x000001B4);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0x678);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0);
-    pe_write_dword(peFile, 0x000001B8);
-    pe_write_dword(peFile, 0);
-    
-    fwrite("KERNEL32.dll", 1, 12, peFile);
-    pe_write_byte(peFile, 0);
-    fwrite("GetStdHandle", 12, 1, peFile);
-    pe_write_byte(peFile, 0);
-    pe_write_word(peFile, 0x0000);
-    fwrite("WriteFile", 9, 1, peFile);
-    pe_write_byte(peFile, 0);
-    pe_write_word(peFile, 0x000C);
-    fwrite("ExitProcess", 12, 1, peFile);
-    pe_write_byte(peFile, 0);
-    pe_write_word(peFile, 0x0015);
-    
+    fwrite(peData, 1, minSize, peFile);
     fclose(peFile);
+    free(peData);
 }
 
 void generateMachineCode(ASTNode *node) {
@@ -719,16 +659,20 @@ void generateMachineCode(ASTNode *node) {
     
     cb_init();
     
-    instr_encode("sub_rsp", 0, 0, 0x28);
-    instr_encode("mov_imm32", REG_RAX, 0, 0xFFFFFFF5);
-    instr_encode("call_rel", 0, 0, 0x00000022);
-    instr_encode("mov_reg", REG_RCX, REG_RAX, 0);
-    
-    translateIRToX64(irContent);
-    
-    instr_encode("add_rsp", 0, 0, 0x28);
-    instr_encode("xor_reg", REG_RCX, REG_RCX, 0);
-    instr_encode("call_rel", 0, 0, 0x0000001E);
+    instr_encode("mov_imm32", REG_RCX, 0, 0);
+    cb_emit_u8(0xE8);
+    cb_emit_u8(0x02);
+    cb_emit_u8(0x00);
+    cb_emit_u8(0x00);
+    cb_emit_u8(0x00);
+    cb_emit_u8(0x66);
+    cb_emit_u8(0x90);
+    cb_emit_u8(0xFF);
+    cb_emit_u8(0x25);
+    cb_emit_u8(0x26);
+    cb_emit_u8(0x20);
+    cb_emit_u8(0x00);
+    cb_emit_u8(0x00);
     
     generatePEFile();
     

@@ -1,4 +1,5 @@
 [![EN](https://img.shields.io/badge/Language-English-blue)](./README.md)
+[![开发者指南](https://img.shields.io/badge/Developer-Guide-blue)](./dev_ch.md)
 
 # E语言编译器
 

@@ -1,4 +1,5 @@
 [![CN](https://img.shields.io/badge/语言-中文-blue)](./README_CN.md)
+[![Dev Guide](https://img.shields.io/badge/Developer-Guide-blue)](./dev.md)
 
 # E Language Compiler
 
