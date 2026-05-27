@@ -1896,11 +1896,9 @@ void generateARMProgram(ASTNode *node) {
     fprintf(output, "    mov x0, #1\n");
     fprintf(output, "    adrp x1, __stdout_buf\n");
     fprintf(output, "    add x1, x1, :lo12:__stdout_buf\n");
-    fprintf(output, "    mov x2, x1\n");
-    fprintf(output, "    adrp x3, __stdout_buf_pos\n");
-    fprintf(output, "    add x3, x3, :lo12:__stdout_buf_pos\n");
-    fprintf(output, "    ldr w4, [x3]\n");
-    fprintf(output, "    mov x2, x4\n");
+    fprintf(output, "    adrp x2, __stdout_buf_pos\n");
+    fprintf(output, "    add x2, x2, :lo12:__stdout_buf_pos\n");
+    fprintf(output, "    ldr w2, [x2]\n");
     fprintf(output, "    mov x8, #64\n");
     fprintf(output, "    svc #0\n");
     fprintf(output, "    adrp x0, __stdout_buf_pos\n");
@@ -2155,7 +2153,10 @@ void generateARMCode(ASTNode *node) {
             if (node->left) {
                 generateARMExpression(node->left);
             }
-            fprintf(output, "    ldp x29, x30, [sp], #16\n");
+            // We need the same frameSize as in function declaration
+            // For simplicity, use a fixed safe size for now
+            // TODO: Store frameSize in a variable during function declaration
+            fprintf(output, "    ldp x29, x30, [sp], #64\n");
             fprintf(output, "    ret\n");
             break;
         case AST_FOR:
@@ -2315,21 +2316,24 @@ void generateARMFunctionDeclaration(ASTNode *node) {
     int paramIndex = 0;
     while (param) {
         addVariable(param->token.value);
-        varTable[paramIndex].offset = paramIndex * 8;  // x0=0, x1=8, x2=16, ...
+        varTable[paramIndex].offset = paramIndex * 8 + 16;  // x0=16, x1=24, ... after frame pointer
         param = param->next;
         paramIndex++;
     }
 
+    // Fixed stack frame size for simplicity (16-byte aligned)
+    int frameSize = 64;  // Fixed size for all functions
+
     fprintf(output, "%s:\n", node->token.value);
-    fprintf(output, "    stp x29, x30, [sp, -16]!\n");
+    fprintf(output, "    stp x29, x30, [sp, -%d]!\n", frameSize);
     fprintf(output, "    mov x29, sp\n");
 
-    // Save parameters to stack
+    // Save parameters to stack (x0-x7 to stack)
     param = node->params;
     paramIndex = 0;
-    while (param) {
+    while (param && paramIndex < 8) {
         // Store parameter register to stack
-        fprintf(output, "    str x%d, [x29, #%d]\n", paramIndex, paramIndex * 8);
+        fprintf(output, "    str x%d, [x29, #%d]\n", paramIndex, 16 + paramIndex * 8);
         param = param->next;
         paramIndex++;
     }
@@ -2421,24 +2425,55 @@ void generateARMFunctionCall(ASTNode *node) {
         }
         fprintf(output, "    bl string_func\n");
     } else {
-        // Pass parameters in registers x0-x7
+        // Count parameters first
         ASTNode *param = node->params;
+        int paramCount = 0;
+        while (param) {
+            paramCount++;
+            param = param->next;
+        }
+        
+        // Calculate stack space for parameters (>8 params go on stack)
+        int stackParamCount = (paramCount > 8) ? (paramCount - 8) : 0;
+        int stackSpace = stackParamCount * 8;
+        stackSpace = (stackSpace + 15) & ~15;  // 16-byte alignment
+        
+        if (stackSpace > 0) {
+            fprintf(output, "    sub sp, sp, #%d\n", stackSpace);
+        }
+        
+        // Pass parameters: first 8 in x0-x7, rest on stack
+        param = node->params;
         int paramIndex = 0;
         while (param) {
-            // Use generateARMExpression to properly handle literals and variables
-            generateARMExpression(param);
-            // Move to appropriate register based on parameter index
-            if (paramIndex == 1) {
-                fprintf(output, "    mov x1, x0\n");
-            } else if (paramIndex == 2) {
-                fprintf(output, "    mov x2, x0\n");
-            } else if (paramIndex == 3) {
-                fprintf(output, "    mov x3, x0\n");
+            if (paramIndex < 8) {
+                generateARMExpression(param);
+                // Move to correct register
+                switch (paramIndex) {
+                    case 0: break;  // Already in x0
+                    case 1: fprintf(output, "    mov x1, x0\n"); break;
+                    case 2: fprintf(output, "    mov x2, x0\n"); break;
+                    case 3: fprintf(output, "    mov x3, x0\n"); break;
+                    case 4: fprintf(output, "    mov x4, x0\n"); break;
+                    case 5: fprintf(output, "    mov x5, x0\n"); break;
+                    case 6: fprintf(output, "    mov x6, x0\n"); break;
+                    case 7: fprintf(output, "    mov x7, x0\n"); break;
+                }
+            } else {
+                // Push to stack
+                generateARMExpression(param);
+                int stackOffset = (paramIndex - 8) * 8;
+                fprintf(output, "    str x0, [sp, #%d]\n", stackOffset);
             }
             param = param->next;
             paramIndex++;
         }
+        
         fprintf(output, "    bl %s\n", node->token.value);
+        
+        if (stackSpace > 0) {
+            fprintf(output, "    add sp, sp, #%d\n", stackSpace);
+        }
     }
 }
 
