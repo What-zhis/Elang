@@ -3,7 +3,6 @@
 #include <string.h>
 #include "lexer.h"
 #include "parser.h"
-#include "codegen.h"
 #include "codegen_nasm.h"
 #include "preprocessor.h"
 #include "codegen_ir.h"
@@ -11,7 +10,6 @@
 #include "errors.h"
 
 extern FILE *output;
-extern void generateCode(ASTNode *node);
 extern void freeAST(ASTNode *node);
 extern SymbolTable *currentSymbolTable;
 extern void freeSymbolTable(SymbolTable *table);
@@ -133,11 +131,10 @@ char *processImports(const char *mainFile) {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "%sUsage: %s [--run|--compile|--debug|--c|--ir|--machine|--pool-stats] [--arm] [--linux|--win|--windows|--android] [--opt|-O <level>] [--no-color] <input_file>%s\n", COLOR_CYAN, argv[0], COLOR_RESET);
+        fprintf(stderr, "%sUsage: %s [--run|--compile|--debug|--ir|--machine|--pool-stats] [--arm] [--linux|--win|--windows|--android] [--opt|-O <level>] [--no-color] <input_file>%s\n", COLOR_CYAN, argv[0], COLOR_RESET);
         fprintf(stderr, "  --run: Compile and run, then delete temporary files (default)\n");
         fprintf(stderr, "  --compile: Compile file but don't run\n");
         fprintf(stderr, "  --debug: Only check for errors, don't run\n");
-        fprintf(stderr, "  --c: Generate C code instead of NASM assembly\n");
         fprintf(stderr, "  --ir: Generate IR (intermediate representation)\n");
         fprintf(stderr, "  --machine: Generate machine code directly\n");
         fprintf(stderr, "  --pool-stats: Show AST memory pool statistics\n");
@@ -176,8 +173,6 @@ int main(int argc, char *argv[]) {
             debugOnly = 1;
         } else if (strcmp(argv[i], "--pool-stats") == 0) {
             showPoolStats = 1;
-        } else if (strcmp(argv[i], "--c") == 0) {
-            outputFormat = OUTPUT_FORMAT_C;
         } else if (strcmp(argv[i], "--ir") == 0) {
             outputFormat = OUTPUT_FORMAT_IR;
             runMode = 0;
@@ -367,22 +362,6 @@ int main(int argc, char *argv[]) {
     if (outputFormat == OUTPUT_FORMAT_IR || outputFormat == OUTPUT_FORMAT_MACHINE) {
         fprintf(stderr, "done\n");
         return 0;
-    }
-    
-    // C代码模式
-    if (outputFormat == OUTPUT_FORMAT_C) {
-        sprintf(compileCommand, "gcc -o output.exe output.c");
-        int compileResult = system(compileCommand);
-        if (compileResult != 0) {
-            fprintf(stderr, "Error: Compilation failed\n");
-            return 1;
-        }
-
-        if (runMode) {
-            system(".\\output.exe");
-        } else {
-            fprintf(stderr, "done\n");
-        }
     }
 
     freeSymbolTable(currentSymbolTable);

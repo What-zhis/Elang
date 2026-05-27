@@ -3,7 +3,7 @@
 
 # E Language Compiler
 
-An E language compiler implemented in C, supporting variable declarations, function definitions, control flow, input/output, type conversion, structs, enums, objects, pointers, memory management, source file imports, inline assembly, and a powerful two-level macro system. The compiler can generate C code or NASM assembly code.
+An E language compiler implemented in C, supporting variable declarations, function definitions, control flow, input/output, type conversion, structs, enums, objects, pointers, memory management, source file imports, inline assembly, and a powerful two-level macro system. The compiler can generate NASM assembly code, IR (intermediate representation), or direct machine code.
 
 ## Table of Contents
 
@@ -77,7 +77,7 @@ gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codeg
 ### 1.2 Basic Usage
 
 ```bash
-# Compile and run (default behavior, generates C code)
+# Compile and run (default behavior, generates NASM assembly)
 ./ecompiler.exe <source.e>
 
 # Compile and run (explicit)
@@ -100,7 +100,6 @@ gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codeg
 | `--run` | flag | Compile and run the program (default) |
 | `--compile` | flag | Compile only, don't run |
 | `--debug` | flag | Check syntax errors only, don't generate code |
-| `--c` | flag | Generate C code |
 | `--nasm` | flag | Generate NASM assembly code |
 | `--ir` | flag | Generate Intermediate Representation (IR) code |
 | `--machine` | flag | Generate machine code directly (x86-64 Windows, no external tools needed) |
@@ -111,7 +110,7 @@ gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codeg
 
 | Combination | Behavior |
 |-------------|----------|
-| `--run --c` | Generate C code, compile and run |
+| `--run --nasm` | Generate NASM assembly and compile and run |
 | `--compile --nasm` | Generate NASM assembly and compile, don't run |
 | `--machine --windows` | Generate Windows x86-64 executable directly (standalone, no external tools) |
 | `--debug --ir` | Check syntax errors (IR mode) |
@@ -1019,7 +1018,6 @@ Semantic Analysis (Symbol Table)
     ↓
 Code Generation (Code Generator)
     ↓
-    ├─→ C code (.c) → gcc → Executable
     ├─→ NASM assembly (.asm) → nasm/ld → Executable
     ├─→ Intermediate Representation (.ir)
     └─→ Machine code (.exe) → Directly generate Windows x86-64 executable (no external tools needed)
@@ -1059,12 +1057,6 @@ The compiler uses an "error recovery" strategy, continuing analysis even when er
 4. **Error Summary**: Output all error messages at the end of compilation
 
 ### 4.4 Code Generation Strategy
-
-#### C Code Generation
-
-- Use `sprintf` for type conversion
-- Use `printf` and `scanf` for input/output
-- Use `malloc` and `free` for memory management
 
 #### NASM Assembly Generation (x86-64)
 
@@ -1174,11 +1166,11 @@ The compiler uses an "error recovery" strategy, continuing analysis even when er
 
 ## 6. Platform Compatibility
 
-| Platform | C Code Generation | NASM Assembly Generation | Status |
-|----------|-------------------|--------------------------|--------|
-| Windows | ✅ | ✅ (COFF format) | Tested |
-| Linux | ✅ | ✅ (ELF format) | Basic support |
-| macOS | ✅ | ⏳ | Untested |
+| Platform | NASM Assembly Generation | Status |
+|----------|--------------------------|--------|
+| Windows | ✅ (COFF format) | Tested |
+| Linux | ✅ (ELF format) | Basic support |
+| macOS | ⏳ | Untested |
 
 ---
 

@@ -4,7 +4,6 @@
 #include "lexer.h"
 
 typedef enum {
-    OUTPUT_FORMAT_C,
     OUTPUT_FORMAT_NASM,
     OUTPUT_FORMAT_IR,
     OUTPUT_FORMAT_MACHINE
