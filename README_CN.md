@@ -71,7 +71,8 @@
 ### 1.1 编译编译器
 
 ```bash
-gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codegen_nasm.c src/preprocessor.c
+gcc -o bin/ecc.exe src/main.c 
+src/lexer.c src/parser.c src/codegen_nasm.c src/codegen_ir.c src/preprocessor.c src/optimizer.c src/errors.c -I src
 ```
 
 ### 1.2 基本用法

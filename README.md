@@ -71,7 +71,8 @@ An E language compiler implemented in C, supporting variable declarations, funct
 ### 1.1 Compile the Compiler
 
 ```bash
-gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codegen_nasm.c src/preprocessor.c
+gcc -o bin/ecc.exe src/main.c 
+src/lexer.c src/parser.c src/codegen_nasm.c src/codegen_ir.c src/preprocessor.c src/optimizer.c src/errors.c -I src
 ```
 
 ### 1.2 Basic Usage
