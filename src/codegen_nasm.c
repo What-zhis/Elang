@@ -11,6 +11,7 @@
 #define MAX_LABELS 50
 
 extern SymbolTable *currentSymbolTable;
+FILE *output = NULL;
 
 int nasmLabelCounter = 0;
 int macroUniqueIdCounter = 0;

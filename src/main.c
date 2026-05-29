@@ -342,8 +342,6 @@ int main(int argc, char *argv[]) {
         extern TargetPlatform targetPlatform;
         targetPlatform = target;
         generateMachineCode(program);
-    } else {
-        generateCode(program);
     }
     fclose(outputFile);
 

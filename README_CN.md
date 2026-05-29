@@ -77,7 +77,7 @@ gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codeg
 ### 1.2 基本用法
 
 ```bash
-# 编译并运行（默认行为，生成C代码）
+# 编译并运行（默认行为，生成NASM汇编）
 ./ecompiler.exe <源文件.e>
 
 # 编译并运行（显式指定）
@@ -100,7 +100,6 @@ gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codeg
 | `--run` | 标志 | 编译并运行程序（默认行为） |
 | `--compile` | 标志 | 仅编译，不运行 |
 | `--debug` | 标志 | 仅检查语法错误，不生成代码 |
-| `--c` | 标志 | 生成C代码 |
 | `--nasm` | 标志 | 生成NASM汇编代码 |
 | `--ir` | 标志 | 生成中间表示（IR）代码 |
 | `--machine` | 标志 | 直接生成机器码（x86-64 Windows，不需要外部工具） |
@@ -111,7 +110,7 @@ gcc -o ecompiler.exe src/main.c src/lexer.c src/parser.c src/codegen.c src/codeg
 
 | 组合示例 | 行为 |
 |---------|------|
-| `--run --c` | 生成C代码，编译并运行 |
+| `--run --nasm` | 生成NASM汇编并编译运行 |
 | `--compile --nasm` | 生成NASM汇编并编译，但不运行 |
 | `--machine --windows` | 直接生成Windows x86-64可执行文件（独立，不需要外部工具） |
 | `--debug --ir` | 检查语法错误（IR模式） |
